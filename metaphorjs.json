@@ -1,0 +1,36 @@
+{
+  "version": "0.1",
+  "description": "MetaphorJs.Draggable and MetaphorJs.Droppable",
+
+  "push": [
+    "github"
+  ],
+
+  "build": {
+    "standalone-draggable": {
+      "wrap": true,
+      "global": true,
+      "auto": true,
+      "target": "dist/metaphorjs.draggable.js",
+      "files": [
+        "metaphorjs/src/MetaphorJs.js",
+        [
+          "src/metaphorjs.draggable.js",
+          {
+            "as": "Draggable"
+          }
+        ],
+        [
+          "metaphorjs/src/func/dom/onReady.js",
+          {
+            "as": "onReady"
+          }
+        ]
+      ],
+      "expose": [
+        "Draggable",
+        "onReady"
+      ]
+    }
+  }
+}
