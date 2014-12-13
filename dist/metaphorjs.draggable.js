@@ -2885,12 +2885,27 @@ var getAnimationPrefixes = function(){
 
 
 
-
 var Draggable = (function(){
 
     var prefixes = getAnimationPrefixes(),
         transformPrefix = prefixes.transform,
         rTranslate = /translate(x|y)\([^)]+\)/gi;
+
+    var prepareEvent = function(e, node) {
+        e = normalizeEvent(e || window.event);
+        var touches, i, l, trg;
+
+        if (touches = e.touches) {
+            for (i = 0, l = touches.length; i < l; i++) {
+                trg = touches[i].target;
+                if (node === trg || node.contains(trg)) {
+                    extend(e, touches[i], true, false);
+                }
+            }
+        }
+
+        return e;
+    };
 
     var defaults = {
 
@@ -2908,7 +2923,7 @@ var Draggable = (function(){
         },
 
         drag: {
-            transform:          true,
+            method:             "transform",
             axis:				null,
             grid:				null,
             gridStart:			null,
@@ -2928,7 +2943,7 @@ var Draggable = (function(){
         },
 
         events: {
-            start: {
+            "*": {
                 returnValue:		false,
                 stopPropagation:	true,
                 preventDefault:		true
@@ -2980,6 +2995,8 @@ var Draggable = (function(){
         placeholder: null,
 
         $init: function(node, cfg) {
+
+            console.log("init")
 
             var self = this,
                 cbScope = null,
@@ -3033,37 +3050,44 @@ var Draggable = (function(){
         enable: function() {
             if (!this.enabled) {
                 this.enabled = true;
-                this.setNodeEvents("bind");
+                this.setStartEvents("bind");
             }
         },
 
         disable: function() {
             if (this.enabled) {
                 this.enabled = false;
-                this.setNodeEvents("unbind");
+                this.setStartEvents("unbind");
             }
         },
 
-        setNodeEvents: function(mode) {
+        setStartEvents: function(mode) {
             var self = this,
                 fn = mode == "bind" ? addListener : removeListener;
 
             fn(self.node, "mousedown", self.onMousedownDelegate);
+            fn(self.node, "touchstart", self.onMousedownDelegate);
         },
 
-        setBodyEvents: function(mode) {
+        setMoveEvents: function(mode) {
             var fn = mode == "bind" ? addListener : removeListener,
                 html = document.documentElement,
-                self = this;
+                self = this,
+                node = self.node;
+
 
             fn(html, "mousemove", self.onMousemoveDelegate);
             fn(html, "mouseup", self.onMouseupDelegate);
+
+            fn(node, "touchmove", self.onMousemoveDelegate);
+            fn(node, "touchend", self.onMouseupDelegate);
         },
 
-        processEvent: function(e, type) {
+        processEvent: function(e) {
 
             var self = this,
-                cfg = self.cfg.events[type];
+                evs = self.cfg.events,
+                cfg = evs[e.type] || evs["*"];
 
             if (cfg) {
                 if (cfg.process) {
@@ -3083,9 +3107,9 @@ var Draggable = (function(){
 
 
         onMousedown: function(e) {
-            e = normalizeEvent(e || window.event);
+            e = prepareEvent(e, this.node);
             this.start(e);
-            return this.processEvent(e, "start");
+            return this.processEvent(e);
         },
 
         start: function(e) {
@@ -3097,7 +3121,7 @@ var Draggable = (function(){
             }
 
             self.startEvent = e;
-            self.setBodyEvents('bind');
+            self.setMoveEvents('bind');
 
             if (cfg.start.distance) {
                 self.distance       = true;
@@ -3177,17 +3201,15 @@ var Draggable = (function(){
             }
             else {*/
 
-                /*if (self.offsetParent === null) {
+                if (self.offsetParent === null) {
                     self.offsetParent = getOffsetParent(self.node);
                 }
 
                 var op		= self.offsetParent,
-                    ofs		= getOffset(op);*/
+                    ofs		= getOffset(op || self.node);
 
-            var ofs = getOffset(self.node);
-
-            self.target.offsetX	= ofs.left;
-            self.target.offsetY	= ofs.top;
+                self.target.offsetX	= ofs.left;
+                self.target.offsetY	= ofs.top;
             //}
         },
 
@@ -3195,9 +3217,9 @@ var Draggable = (function(){
 
 
         onMousemove: function(e) {
-            e = normalizeEvent(e || window.event);
+            e = prepareEvent(e, this.node);
             this.move(e);
-            return this.processEvent(e, "move");
+            return this.processEvent(e);
         },
 
         move: function(e) {
@@ -3229,7 +3251,7 @@ var Draggable = (function(){
                 return;
             }
 
-            if (cfg.drag.transform) {
+            if (cfg.drag.method == "transform") {
                 self.applyTransform(e);
             }
             else {
@@ -3308,7 +3330,9 @@ var Draggable = (function(){
 
 
         onMouseup: function(e) {
+            e = prepareEvent(e, this.node);
             this.end(e);
+            return this.processEvent(e);
         },
 
         end: function(e) {
@@ -3316,7 +3340,7 @@ var Draggable = (function(){
             var self = this,
                 cfg = self.cfg;
 
-            self.setBodyEvents('unbind');
+            self.setMoveEvents('unbind');
 
             if (!self.enabled || !self.started) {
                 return;
@@ -3324,7 +3348,7 @@ var Draggable = (function(){
 
             self.trigger('beforeend', self, e);
 
-            if (cfg.drag.transform) {
+            if (cfg.drag.method == "transform") {
                 self.applyPositionFromTransform();
             }
 
