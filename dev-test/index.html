@@ -7,18 +7,50 @@
     <script>
         MetaphorJs.onReady(function(){
 
-            new MetaphorJs.Draggable(document.getElementById("draggable"), {
-                drag: {
-                    transform: true
+
+
+            window.drg = new MetaphorJs.Draggable({
+                draggable: document.getElementById("draggable"),
+                cls: {
+                    drag: "dragged"
+                },
+                start: {
+                    hold: 500,
+                    animate: true
+                },
+                end: {
+                    restore: true,
+                    animate: true
                 }
             });
+
+
         });
     </script>
+    <style>
+        #draggable {
+            width: 100px;
+            height: 100px;
+            background-color: #ccc;
+            position:absolute;
+            transform: translateZ(1px);
+        }
+        #draggable.dragged {
+            background-color: #000066;
+        }
+
+        .drag-start {
+            transition: transform 0.1s;
+        }
+
+        .drag-end {
+            transition: transform 0.1s;
+        }
+    </style>
 </head>
 <body>
 
-    <div id="draggable"
-         style="width: 100px; height: 100px; background-color: #ccc; position:absolute; transform: translateZ(1px);"></div>
+    <div id="draggable"></div>
 
 
 </body>
