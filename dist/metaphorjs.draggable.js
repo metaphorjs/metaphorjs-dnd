@@ -5096,6 +5096,9 @@ var Draggable = (function(){
                     self.handleEl = h || self.draggable;
                 }
             }
+            else {
+                self.handleEl = self.draggable;
+            }
 
             self.onMousedownDelegate = bind(self.onMousedown, self);
             self.onMousemoveDelegate = bind(self.onMousemove, self);
