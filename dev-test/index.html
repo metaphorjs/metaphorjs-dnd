@@ -16,11 +16,7 @@
                 },
                 end: {
                     restore: false,
-                    animate: true
-                },
-                helper: {
-                    tpl: '<div id="helper"></div>',
-                    animate: true
+                    animate: false
                 }
             });
 
@@ -40,6 +36,13 @@
             height: 100px;
             background-color: #006600;
             position:absolute;
+        }
+        #placeholder {
+            width: 100px;
+            height: 100px;
+            position:absolute;
+            border: 1px dotted #BC7A00;
+            box-sizing: border-box;
         }
         #handle {
             position: absolute;

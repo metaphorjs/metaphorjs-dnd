@@ -116,11 +116,12 @@ module.exports = function () {
         },
 
         placeholder: {
-            tpl: null,
-            fn:  null
+            destroy:        true,
+            tpl:            null,
+            fn:             null,
+            context:        null,
+            animate:        false
         },
-
-        data: null,
 
         callback: {
             context:     null,
@@ -161,6 +162,10 @@ module.exports = function () {
 
             if (cfg.helper.tpl || cfg.helper.fn) {
                 this.$plugins.push("draggable.Helper");
+            }
+
+            if (cfg.placeholder.tpl || cfg.placeholder.fn) {
+                this.$plugins.push("draggable.Placeholder");
             }
 
             this.$super(cfg);
