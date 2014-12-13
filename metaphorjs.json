@@ -21,6 +21,12 @@
           }
         ],
         [
+          "src/**",
+          {
+            "as": "*"
+          }
+        ],
+        [
           "metaphorjs/src/func/dom/onReady.js",
           {
             "as": "onReady"

@@ -4918,14 +4918,14 @@ var select = function() {
 
 
 
-var Draggable = (function(){
+var Draggable = function () {
 
     var prefixes = getAnimationPrefixes(),
         transformPrefix = prefixes.transform,
         touchSupported = browserHasEvent("touchstart"),
         documentBlocked = false;
 
-    var prepareEvent = function(e, node) {
+    var prepareEvent = function (e, node) {
         e = normalizeEvent(e || window.event);
         var touches, i, l, trg;
 
@@ -4941,123 +4941,131 @@ var Draggable = (function(){
         return e;
     };
 
-    var blockHandler = function(e) {
+    var blockHandler = function (e) {
         e = normalizeEvent(e || window.event);
         e.preventDefault();
         e.stopPropagation();
         return false;
     };
 
-    var blockDocument = function() {
+    var blockDocument = function () {
         var doc = window.document;
         addListener(doc, "touchstart", blockHandler);
-        addListener(doc, "touchmove", blockHandler);
+        //addListener(doc, "touchmove", blockHandler);
         addListener(doc, "touchend", blockHandler);
         documentBlocked = true;
     };
 
 
-
     var defaults = {
 
-        draggable:              null,
-        blockDocumentEvents:    true,
+        draggable:           null,
+        blockDocumentEvents: true,
 
         cls: {
-            drag:				null
+            drag: null
         },
 
         start: {
-            delay:				0,
-            distance:			0,
-            hold:               0,
-            holdThreshold:      20,
-            animate:            false
+            delay:         0,
+            distance:      0,
+            hold:          0,
+            holdThreshold: 20,
+            animate:       false
         },
 
         end: {
-            restore:			false,
-            animate:            false
+            restore: false,
+            animate: false
         },
 
         drag: {
-            method:             "transform",
-            axis:				null,
-            handle:             null
+            method: "transform",
+            axis:   null,
+            handle: null
         },
 
         cursor: {
-            position:			'click',
-            offsetX:			0,
-            offsetY:			0
+            position: 'click',
+            offsetX:  0,
+            offsetY:  0
         },
 
         drop: {
-            enable:				false,
-            to:					null 	// fn|[dom|jquery|selector|droppable]
+            enable: false,
+            to:     null 	// fn|[dom|jquery|selector|droppable]
         },
 
         events: {
             "*": {
-                returnValue:		false,
-                stopPropagation:	true,
-                preventDefault:		true
+                returnValue:     false,
+                stopPropagation: true,
+                preventDefault:  true
             }
         },
 
         helper: {
-            destroy:			true,
-            zIndex:				9999,
-            tpl:				null,
-            fn:					null
+            destroy:        true,
+            zIndex:         9999,
+            tpl:            null,
+            fn:             null,
+            context:        null,
+            appendTo:       null,
+            manualPosition: false
         },
 
         placeholder: {
-            tpl:				null,
-            fn:					null
+            tpl: null,
+            fn:  null
         },
 
-        data:					null,
+        data: null,
 
         callback: {
-            context:			null,
-            beforestart:        null,
-            start:				null,
-            beforeend:          null,
-            end:				null,
-            drag:				null,
-            drop:               null,
-            destroy:            null
+            context:     null,
+            beforestart: null,
+            start:       null,
+            beforeend:   null,
+            end:         null,
+            drag:        null,
+            drop:        null,
+            destroy:     null
         }
     };
 
     return defineClass({
 
-        $class: "Draggable",
+        $class:  "Draggable",
         $mixins: [ObservableMixin],
 
         draggable: null,
 
-        dragEl: null,
+        dragEl:   null,
         handleEl: null,
+        holderEl: null,
 
-        delayTmt: null,
-        holdTmt: null,
-        startEvent: null,
+        delayTmt:      null,
+        holdTmt:       null,
+        startEvent:    null,
         lastMoveEvent: null,
-        enabled: true,
-        started: false,
-        distance: false,
+        enabled:       true,
+        started:       false,
+        distance:      false,
 
-        dragState: null,
+        dragState:   null,
         targetState: null,
-        
-        $constructor: function(cfg) {
+
+        $constructor: function (cfg) {
             extend(cfg, defaults, false, true);
+
+            if (cfg.helper.tpl || cfg.helper.fn) {
+                this.$plugins.push("draggable.Helper");
+            }
+
             this.$super(cfg);
         },
 
-        $init: function(cfg) {
+        $init: function (cfg) {
 
             var self = this;
 
@@ -5072,14 +5080,14 @@ var Draggable = (function(){
             }
 
             self.dragState = {
-                clickX: null,
-                clickY: null,
-                startX: null,
-                startY: null,
+                clickX:  null,
+                clickY:  null,
+                startX:  null,
+                startY:  null,
                 offsetX: null,
                 offsetY: null,
-                x: null,
-                y: null
+                x:       null,
+                y:       null
             };
 
             self.targetState = {
@@ -5100,9 +5108,14 @@ var Draggable = (function(){
                 self.handleEl = self.draggable;
             }
 
+            self.dragEl = self.draggable;
+            self.holderEl = self.draggable;
+
             self.onMousedownDelegate = bind(self.onMousedown, self);
             self.onMousemoveDelegate = bind(self.onMousemove, self);
             self.onMouseupDelegate = bind(self.onMouseup, self);
+
+            self.trigger("plugin-init");
 
             if (self.enabled) {
                 self.enabled = false;
@@ -5110,21 +5123,27 @@ var Draggable = (function(){
             }
         },
 
-        enable: function() {
+        enable: function () {
+            var self = this;
             if (!this.enabled) {
                 this.enabled = true;
-                this.setStartEvents("bind");
+                if (self.trigger("plugin-enable") !== false) {
+                    this.setStartEvents("bind");
+                }
             }
         },
 
-        disable: function() {
-            if (this.enabled) {
-                this.enabled = false;
-                this.setStartEvents("unbind");
+        disable: function () {
+            var self = this;
+            if (self.enabled) {
+                self.enabled = false;
+                if (self.trigger("plugin-disable") !== false) {
+                    self.setStartEvents("unbind");
+                }
             }
         },
 
-        setStartEvents: function(mode) {
+        setStartEvents: function (mode) {
 
             var self = this,
                 fn = mode == "bind" ? addListener : removeListener;
@@ -5136,7 +5155,7 @@ var Draggable = (function(){
             }
         },
 
-        setMoveEvents: function(mode) {
+        setMoveEvents: function (mode) {
 
             var fn = mode == "bind" ? addListener : removeListener,
                 html = document.documentElement,
@@ -5153,7 +5172,7 @@ var Draggable = (function(){
             }
         },
 
-        processEvent: function(e) {
+        processEvent: function (e) {
 
             var self = this,
                 evs = self.events,
@@ -5175,14 +5194,13 @@ var Draggable = (function(){
         },
 
 
-
-        onMousedown: function(e) {
-            e = prepareEvent(e, this.draggable);
+        onMousedown: function (e) {
+            e = prepareEvent(e, this.handleEl);
             this.dragStart(e);
             return this.processEvent(e);
         },
 
-        dragStart: function(e) {
+        dragStart: function (e) {
 
             var self = this,
                 start = self.start;
@@ -5192,6 +5210,8 @@ var Draggable = (function(){
             }
 
             self.startEvent = e;
+
+            self.trigger("plugin-before-start");
 
             self.setMoveEvents('bind');
 
@@ -5206,7 +5226,7 @@ var Draggable = (function(){
             }
         },
 
-        onAfterDelay: function(e) {
+        onAfterDelay: function (e) {
 
             var self = this,
                 start = self.start,
@@ -5216,9 +5236,9 @@ var Draggable = (function(){
             self.holdTmt = null;
 
             if (start.distance) {
-                self.distance           = start.distance;
-                self.dragState.clickX	= se.clientX;
-                self.dragState.clickY	= se.clientY;
+                self.distance = start.distance;
+                self.dragState.clickX = se.clientX;
+                self.dragState.clickY = se.clientY;
             }
             else {
                 self.onActualStart(e);
@@ -5226,113 +5246,113 @@ var Draggable = (function(){
             }
         },
 
-        onActualStart: function(e) {
+        onActualStart: function (e) {
 
             var self = this,
-                se	= self.startEvent;
+                se = self.startEvent;
 
             if (self.trigger('beforestart', self, se) === false) {
                 self.dragStop(e);
                 return;
             }
 
-            self.started   = true;
+            self.started = true;
 
             self.processStartEvent();
             self.cacheOffsetParent();
+
+            self.trigger("plugin-start");
 
             if (self.cls.drag) {
                 addClass(self.draggable, self.cls.drag);
             }
 
             if (self.start.animate) {
-                animate(self.draggable, ["drag-start"], null, false);
+                animate(self.dragEl, ["drag-start"], null, false);
             }
 
             self.trigger('start', self, se);
         },
 
-        processStartEvent: function() {
+        processStartEvent: function () {
 
-            var self    = this,
-                e		= self.startEvent,
-                node	= self.draggable,
-                ofs		= getOffset(node),
-                cur		= self.cursor.position,
-                drag    = self.dragState;
+            var self = this,
+                e = self.startEvent,
+                node = self.draggable,
+                ofs = getOffset(node),
+                cur = self.cursor.position,
+                drag = self.dragState;
 
-            drag.clickX	    = e.clientX;
-            drag.clickY	    = e.clientY;
-            drag.startX	    = ofs.left;
-            drag.startY	    = ofs.top;
-            drag.offsetX	= drag.clickX - ofs.left;
-            drag.offsetY	= drag.clickY - ofs.top;
+            drag.clickX = e.clientX;
+            drag.clickY = e.clientY;
+            drag.startX = ofs.left;
+            drag.startY = ofs.top;
+            drag.offsetX = drag.clickX - ofs.left;
+            drag.offsetY = drag.clickY - ofs.top;
 
 
             if (cur != 'click') {
 
-                var w	= getOuterWidth(node),
-                    h	= getOuterHeight(node);
+                var w = getOuterWidth(node),
+                    h = getOuterHeight(node);
 
                 if (cur.indexOf('c') != -1) {
-                    drag.offsetX    = w / 2;
-                    drag.offsetY    = h / 2;
+                    drag.offsetX = w / 2;
+                    drag.offsetY = h / 2;
                 }
 
                 if (cur.indexOf('t') != -1) {
-                    drag.offsetY	= 0;
+                    drag.offsetY = 0;
                 }
                 else if (cur.indexOf('b') != -1) {
-                    drag.offsetY	= h;
+                    drag.offsetY = h;
                 }
 
                 if (cur.indexOf('l') != -1) {
-                    drag.offsetX	= 0;
+                    drag.offsetX = 0;
                 }
                 else if (cur.indexOf('r') != -1) {
-                    drag.offsetX    = w;
+                    drag.offsetX = w;
                 }
             }
 
-            drag.offsetY	-= self.cursor.offsetY;
-            drag.offsetX	-= self.cursor.offsetX;
+            drag.offsetY -= self.cursor.offsetY;
+            drag.offsetX -= self.cursor.offsetX;
         },
 
-        cacheOffsetParent: function() {
+        cacheOffsetParent: function () {
 
             var self = this;
-
             /*if (helper.elem) {
-                target.offsetX	= 0;
-                target.offsetY	= 0;
+             target.offsetX	= 0;
+             target.offsetY	= 0;
+             }
+             else {*/
+
+            if (self.offsetParent === null) {
+                self.offsetParent = getOffsetParent(self.draggable);
             }
-            else {*/
 
-                if (self.offsetParent === null) {
-                    self.offsetParent = getOffsetParent(self.draggable);
-                }
+            var op = self.offsetParent, ofs = getOffset(op || self.draggable);
 
-                var op		= self.offsetParent,
-                    ofs		= getOffset(op || self.draggable);
+            self.
 
-                self.targetState.offsetX	= ofs.left;
-                self.targetState.offsetY	= ofs.top;
+                targetState.offsetX = ofs.left;
+            self.targetState.offsetY = ofs.top;
             //}
         },
 
 
-
-
-        onMousemove: function(e) {
+        onMousemove: function (e) {
             e = prepareEvent(e, this.draggable);
             this.dragMove(e);
             return this.processEvent(e);
         },
 
-        dragMove: function(e) {
+        dragMove:          function (e) {
 
-            var self    = this,
-                drag    = self.dragState;
+            var self = this,
+                drag = self.dragState;
 
             self.lastMoveEvent = e;
 
@@ -5351,8 +5371,8 @@ var Draggable = (function(){
 
             if (self.distance) {
 
-                if (Math.abs(e.clientX - drag.clickX)  >= self.distance ||
-                    Math.abs(e.clientY - drag.clickY) 	>= self.distance) {
+                if (Math.abs(e.clientX - drag.clickX) >= self.distance ||
+                    Math.abs(e.clientY - drag.clickY) >= self.distance) {
 
                     self.distance = false;
                     self.onActualStart(e);
@@ -5365,12 +5385,11 @@ var Draggable = (function(){
                     return;
                 }
             }
-
             /*if (!drag.draggable) {
-                state.started = false;
-                self.dragStop(e);
-                return;
-            }*/
+             state.started = false;
+             self.dragStop(e);
+             return;
+             }*/
 
 
             if (self.drag.method == "transform") {
@@ -5381,12 +5400,10 @@ var Draggable = (function(){
             }
 
             self.trigger('drag', self, e);
-        },
-
-        applyTransform: function(e) {
+        }, applyTransform: function (e) {
 
             var self = this,
-                style = self.draggable.style,
+                style = self.dragEl.style,
                 ds = self.dragState,
                 transform = "",
                 axis = self.drag.axis,
@@ -5394,10 +5411,10 @@ var Draggable = (function(){
                 y = e.clientY - ds.offsetY - self.targetState.offsetY;
 
             if (axis != "x") {
-                transform += " translateY("+y+"px)";
+                transform += " translateY(" + y + "px)";
             }
             if (axis != "y") {
-                transform += " translateX("+x+"px)";
+                transform += " translateX(" + x + "px)";
             }
 
             ds.x = x;
@@ -5406,10 +5423,10 @@ var Draggable = (function(){
             style[transformPrefix] = transform;
         },
 
-        applyPositionFromTransform: function() {
+        applyPositionFromTransform: function () {
 
             var self = this,
-                style = self.draggable.style,
+                style = self.dragEl.style,
                 axis = self.drag.axis;
 
             if (axis != "x") {
@@ -5422,10 +5439,10 @@ var Draggable = (function(){
             style[transformPrefix] = "";
         },
 
-        applyPosition: function(e) {
+        applyPosition: function (e) {
 
             var self = this,
-                style = self.draggable.style,
+                style = self.dragEl.style,
                 axis = self.drag.axis,
                 ds = self.dragState,
                 x = e.clientX - ds.offsetX,
@@ -5443,10 +5460,26 @@ var Draggable = (function(){
             ds.y = y;
         },
 
-        restoreOriginalPosition: function() {
+        applyFinalPosition: function () {
+            var self = this,
+                style = self.holderEl.style,
+                ds = self.dragState,
+                ts = self.targetState,
+                axis = self.drag.axis;
+
+            if (axis != "x") {
+                style.top = ts.offsetY + ds.y + "px";
+            }
+
+            if (axis != "y") {
+                style.left = ts.offsetX + ds.x + "px";
+            }
+        },
+
+        restoreOriginalPosition: function () {
 
             var self = this,
-                style = self.draggable.style,
+                style = self.dragEl.style,
                 ds = self.dragState;
 
             if (self.drag.method == "transform") {
@@ -5459,13 +5492,13 @@ var Draggable = (function(){
         },
 
 
-        onMouseup: function(e) {
+        onMouseup: function (e) {
             e = prepareEvent(e, this.draggable);
             this.dragStop(e);
             return this.processEvent(e);
         },
 
-        dragStop: function(e) {
+        dragStop: function (e) {
 
             var self = this;
 
@@ -5489,10 +5522,15 @@ var Draggable = (function(){
                 return;
             }
 
+            self.trigger("plugin-before-end");
+
             self.trigger('beforeend', self, e);
 
             if (self.end.restore) {
                 self.restoreOriginalPosition();
+            }
+            else if (self.draggable !== self.dragEl) {
+                self.applyFinalPosition();
             }
             else if (self.drag.method == "transform") {
                 self.applyPositionFromTransform();
@@ -5503,15 +5541,21 @@ var Draggable = (function(){
             }
 
             if (self.end.animate) {
-                animate(self.draggable, ["drag-end"], null, false);
+                animate(self.end.restore ? self.dragEl : self.holderEl, ["drag-end"], null, false)
+                    .done(self.onEndAnimation, self);
             }
 
             self.started = false;
 
+            self.trigger("plugin-end");
             self.trigger('end', self, e);
         },
 
-        destroy: function() {
+        onEndAnimation: function () {
+            this.trigger("plugin-end-animation");
+        },
+
+        destroy: function () {
 
             this.disable();
 
@@ -5521,7 +5565,132 @@ var Draggable = (function(){
     });
 
 
-}());
+}();
+
+
+
+
+function toFragment(nodes) {
+
+    var fragment = window.document.createDocumentFragment(),
+        i, l;
+
+    if (isString(nodes)) {
+        var tmp = window.document.createElement('div');
+        tmp.innerHTML = nodes;
+        nodes = tmp.childNodes;
+    }
+
+    if (!nodes) {
+        return fragment;
+    }
+
+    if (nodes.nodeType) {
+        fragment.appendChild(nodes);
+    }
+    else {
+        if (nodes.item) {
+            for (i = -1, l = nodes.length >>> 0; ++i !== l; fragment.appendChild(nodes[0])) {}
+        }
+        else {
+            for (i = -1, l = nodes.length; ++i !== l; fragment.appendChild(nodes[i])) {}
+        }
+    }
+
+    return fragment;
+};
+
+
+
+
+var DraggableHelperPlugin = defineClass({
+    $class: "draggable.Helper",
+
+    drg: null,
+    helperEl: null,
+
+    $init: function(draggable) {
+        var self = this;
+        self.drg = draggable;
+    },
+
+    $beforeHostInit: function() {
+        var self = this;
+        self.drg.on("plugin-before-start", self.onBeforeStart, self);
+        self.drg.on("plugin-start", self.onStart, self);
+        self.drg.on("plugin-end", self.onEnd, self);
+        self.drg.on("plugin-end-animation", self.onEndAnimation, self);
+    },
+
+    createHelper: function() {
+
+        var self = this,
+            drg = self.drg,
+            cfg = drg.helper,
+            el;
+
+        if (cfg.tpl) {
+            el = toFragment(cfg.tpl).firstChild;
+        }
+        else {
+            el = cfg.fn.call(cfg.context, drg);
+        }
+
+        drg.dragEl = el;
+        self.helperEl = el;
+    },
+
+    positionHelper: function() {
+
+        var self = this,
+            drg = self.drg,
+            cfg = drg.helper,
+            trgState = drg.targetState,
+            style = self.helperEl.style,
+            appendTo = cfg.appendTo || drg.draggable.parentNode;
+
+        if (cfg.manualPosition !== true) {
+            style.left = trgState.offsetX + "px";
+            style.top = trgState.offsetY + "px";
+        }
+
+        if (cfg.appendTo !== false) {
+            appendTo.appendChild(self.helperEl);
+        }
+    },
+
+    destroyHelper: function() {
+        var self = this,
+            el = self.helperEl;
+        el.parentNode.removeChild(el);
+    },
+
+    onBeforeStart: function() {
+        var self = this;
+
+        if (!self.helperEl) {
+            self.createHelper();
+        }
+    },
+
+    onStart: function() {
+
+        var self = this;
+
+        self.positionHelper();
+    },
+
+    onEnd: function() {
+        var self = this;
+        if (!self.drg.end.animate) {
+            self.destroyHelper();
+        }
+    },
+
+    onEndAnimation: function() {
+        this.destroyHelper();
+    }
+});
 
 
 
