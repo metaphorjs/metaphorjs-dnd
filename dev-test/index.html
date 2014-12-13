@@ -16,10 +16,11 @@
                 },
                 end: {
                     restore: false,
-                    animate: false
+                    animate: true
                 },
                 helper: {
-                    tpl: '<div id="helper"></div>'
+                    tpl: '<div id="helper"></div>',
+                    animate: true
                 }
             });
 
@@ -52,12 +53,26 @@
             background-color: #000066;
         }
 
-        .drag-start {
+        .mjs-drag-start-active {
             transition: transform 0.1s;
         }
 
-        .drag-end {
-            transition: transform 0.1s;
+        .mjs-drag-end {
+            top: 0;
+            left: 0;
+        }
+
+        .mjs-drag-end-active {
+            transition: transform 0.3s, left 0.3s, top 0.3s;
+        }
+
+        .mjs-leave {
+            opacity: 1;
+        }
+
+        .mjs-leave-active {
+            transition: opacity 0.3s;
+            opacity: 0;
         }
     </style>
 </head>

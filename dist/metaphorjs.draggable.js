@@ -5011,7 +5011,8 @@ var Draggable = function () {
             fn:             null,
             context:        null,
             appendTo:       null,
-            manualPosition: false
+            manualPosition: false,
+            animate:        false
         },
 
         placeholder: {
@@ -5268,7 +5269,7 @@ var Draggable = function () {
             }
 
             if (self.start.animate) {
-                animate(self.dragEl, ["drag-start"], null, false);
+                animate(self.dragEl, ["mjs-drag-start"], null, false);
             }
 
             self.trigger('start', self, se);
@@ -5523,8 +5524,36 @@ var Draggable = function () {
             }
 
             self.trigger("plugin-before-end");
-
             self.trigger('beforeend', self, e);
+
+
+            if (self.end.animate) {
+                animate(
+                    self.end.restore ? self.dragEl : self.holderEl,
+                    ["mjs-drag-end"],
+                    null,
+                    false,
+                    null,
+                    function(el, position, stage){
+                        if (stage == "active") {
+                            self.positionOnStop(e);
+                        }
+                    })
+                    .done(self.onEndAnimation, self);
+            }
+            else {
+                self.positionOnStop(e);
+            }
+
+
+        },
+
+        positionOnStop: function(e) {
+            var self = this;
+
+            if (self.cls.drag) {
+                removeClass(self.draggable, self.cls.drag);
+            }
 
             if (self.end.restore) {
                 self.restoreOriginalPosition();
@@ -5534,15 +5563,6 @@ var Draggable = function () {
             }
             else if (self.drag.method == "transform") {
                 self.applyPositionFromTransform();
-            }
-
-            if (self.cls.drag) {
-                removeClass(self.draggable, self.cls.drag);
-            }
-
-            if (self.end.animate) {
-                animate(self.end.restore ? self.dragEl : self.holderEl, ["drag-end"], null, false)
-                    .done(self.onEndAnimation, self);
             }
 
             self.started = false;
@@ -5662,7 +5682,12 @@ var DraggableHelperPlugin = defineClass({
     destroyHelper: function() {
         var self = this,
             el = self.helperEl;
+
         el.parentNode.removeChild(el);
+
+        if (self.drg.helper.destroy) {
+            self.helperEl = null;
+        }
     },
 
     onBeforeStart: function() {
@@ -5676,19 +5701,26 @@ var DraggableHelperPlugin = defineClass({
     onStart: function() {
 
         var self = this;
-
         self.positionHelper();
     },
 
     onEnd: function() {
-        var self = this;
-        if (!self.drg.end.animate) {
+        var self = this,
+            helperAnim = self.drg.helper.animate;
+        if (!self.drg.end.animate && !helperAnim) {
             self.destroyHelper();
+        }
+        if (helperAnim){
+            animate(self.helperEl, "leave", null, false)
+                .done(self.destroyHelper, self);
         }
     },
 
     onEndAnimation: function() {
-        this.destroyHelper();
+        var self = this;
+        if (self.drg.end.animate && !self.drg.helper.animate) {
+            self.destroyHelper();
+        }
     }
 });
 

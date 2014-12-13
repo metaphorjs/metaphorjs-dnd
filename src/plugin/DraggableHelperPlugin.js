@@ -1,6 +1,7 @@
 
 var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
-    toFragment = require("metaphorjs/src/func/dom/toFragment.js");
+    toFragment = require("metaphorjs/src/func/dom/toFragment.js"),
+    animate = require("metaphorjs-animate/src/metaphorjs.animate.js");
 
 
 module.exports = defineClass({
@@ -62,7 +63,12 @@ module.exports = defineClass({
     destroyHelper: function() {
         var self = this,
             el = self.helperEl;
+
         el.parentNode.removeChild(el);
+
+        if (self.drg.helper.destroy) {
+            self.helperEl = null;
+        }
     },
 
     onBeforeStart: function() {
@@ -76,18 +82,25 @@ module.exports = defineClass({
     onStart: function() {
 
         var self = this;
-
         self.positionHelper();
     },
 
     onEnd: function() {
-        var self = this;
-        if (!self.drg.end.animate) {
+        var self = this,
+            helperAnim = self.drg.helper.animate;
+        if (!self.drg.end.animate && !helperAnim) {
             self.destroyHelper();
+        }
+        if (helperAnim){
+            animate(self.helperEl, "leave", null, false)
+                .done(self.destroyHelper, self);
         }
     },
 
     onEndAnimation: function() {
-        this.destroyHelper();
+        var self = this;
+        if (self.drg.end.animate && !self.drg.helper.animate) {
+            self.destroyHelper();
+        }
     }
 });

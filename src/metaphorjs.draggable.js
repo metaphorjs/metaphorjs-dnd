@@ -111,7 +111,8 @@ module.exports = function () {
             fn:             null,
             context:        null,
             appendTo:       null,
-            manualPosition: false
+            manualPosition: false,
+            animate:        false
         },
 
         placeholder: {
@@ -368,7 +369,7 @@ module.exports = function () {
             }
 
             if (self.start.animate) {
-                animate(self.dragEl, ["drag-start"], null, false);
+                animate(self.dragEl, ["mjs-drag-start"], null, false);
             }
 
             self.trigger('start', self, se);
@@ -623,8 +624,36 @@ module.exports = function () {
             }
 
             self.trigger("plugin-before-end");
-
             self.trigger('beforeend', self, e);
+
+
+            if (self.end.animate) {
+                animate(
+                    self.end.restore ? self.dragEl : self.holderEl,
+                    ["mjs-drag-end"],
+                    null,
+                    false,
+                    null,
+                    function(el, position, stage){
+                        if (stage == "active") {
+                            self.positionOnStop(e);
+                        }
+                    })
+                    .done(self.onEndAnimation, self);
+            }
+            else {
+                self.positionOnStop(e);
+            }
+
+
+        },
+
+        positionOnStop: function(e) {
+            var self = this;
+
+            if (self.cls.drag) {
+                removeClass(self.draggable, self.cls.drag);
+            }
 
             if (self.end.restore) {
                 self.restoreOriginalPosition();
@@ -634,15 +663,6 @@ module.exports = function () {
             }
             else if (self.drag.method == "transform") {
                 self.applyPositionFromTransform();
-            }
-
-            if (self.cls.drag) {
-                removeClass(self.draggable, self.cls.drag);
-            }
-
-            if (self.end.animate) {
-                animate(self.end.restore ? self.dragEl : self.holderEl, ["drag-end"], null, false)
-                    .done(self.onEndAnimation, self);
             }
 
             self.started = false;
