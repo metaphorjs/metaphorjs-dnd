@@ -13,13 +13,10 @@ var extend = require("metaphorjs/src/func/extend.js"),
     getOuterHeight = require("metaphorjs/src/func/dom/getOuterHeight.js"),
     getOffsetParent = require("metaphorjs/src/func/dom/getOffsetParent.js"),
     getAnimationPrefixes = require("metaphorjs-animate/src/func/getAnimationPrefixes.js"),
-    getStyle = require("metaphorjs/src/func/dom/getStyle.js"),
-    undf = require("metaphorjs/src/var/undf.js"),
-    raf = require("metaphorjs-animate/src/func/raf.js"),
     async = require("metaphorjs/src/func/async.js"),
     animate = require("metaphorjs-animate/src/metaphorjs.animate.js"),
-    stopAnimation = require("metaphorjs-animate/src/func/stopAnimation.js"),
-    browserHasEvent = require("metaphorjs/src/func/browser/browserHasEvent.js");
+    browserHasEvent = require("metaphorjs/src/func/browser/browserHasEvent.js"),
+    select = require("metaphorjs-select/src/metaphorjs.select.js");
 
 module.exports = (function(){
 
@@ -85,7 +82,8 @@ module.exports = (function(){
 
         drag: {
             method:             "transform",
-            axis:				null
+            axis:				null,
+            handle:             null
         },
 
         cursor: {
@@ -104,11 +102,6 @@ module.exports = (function(){
                 returnValue:		false,
                 stopPropagation:	true,
                 preventDefault:		true
-            },
-            "touchstart": {
-                returnValue:		true,
-                stopPropagation:	false,
-                preventDefault:		false
             }
         },
 
@@ -144,6 +137,9 @@ module.exports = (function(){
         $mixins: [ObservableMixin],
 
         draggable: null,
+
+        dragEl: null,
+        handleEl: null,
 
         delayTmt: null,
         holdTmt: null,
@@ -191,6 +187,16 @@ module.exports = (function(){
                 offsetY: null
             };
 
+            var h;
+            if (h = self.drag.handle) {
+                if (typeof h == "string") {
+                    self.handleEl = select(h).shift() || self.draggable;
+                }
+                else {
+                    self.handleEl = h || self.draggable;
+                }
+            }
+
             self.onMousedownDelegate = bind(self.onMousedown, self);
             self.onMousemoveDelegate = bind(self.onMousemove, self);
             self.onMouseupDelegate = bind(self.onMouseup, self);
@@ -220,10 +226,10 @@ module.exports = (function(){
             var self = this,
                 fn = mode == "bind" ? addListener : removeListener;
 
-            fn(self.draggable, "mousedown", self.onMousedownDelegate);
+            fn(self.handleEl, "mousedown", self.onMousedownDelegate);
 
             if (touchSupported) {
-                fn(self.draggable, "touchstart", self.onMousedownDelegate);
+                fn(self.handleEl, "touchstart", self.onMousedownDelegate);
             }
         },
 

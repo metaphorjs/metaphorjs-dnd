@@ -14,9 +14,8 @@
                 cls: {
                     drag: "dragged"
                 },
-                start: {
-                    hold: 500,
-                    animate: true
+                drag: {
+                    handle: document.getElementById("handle")
                 },
                 end: {
                     restore: true,
@@ -35,6 +34,14 @@
             position:absolute;
             transform: translateZ(1px);
         }
+        #handle {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            background-color: #000;
+            width: 20px;
+            height: 20px;
+        }
         #draggable.dragged {
             background-color: #000066;
         }
@@ -50,7 +57,9 @@
 </head>
 <body>
 
-    <div id="draggable"></div>
+    <div id="draggable">
+        <div id="handle"></div>
+    </div>
 
 
 </body>
