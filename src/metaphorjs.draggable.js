@@ -9,9 +9,13 @@ var extend = require("metaphorjs/src/func/extend.js"),
     removeClass = require("metaphorjs/src/func/dom/removeClass.js"),
     normalizeEvent = require("metaphorjs/src/func/event/normalizeEvent.js"),
     getOffset = require("metaphorjs/src/func/dom/getOffset.js"),
+    getPosition = require("metaphorjs/src/func/dom/getPosition.js"),
     getOuterWidth = require("metaphorjs/src/func/dom/getOuterWidth.js"),
     getOuterHeight = require("metaphorjs/src/func/dom/getOuterHeight.js"),
+    getWidth = require("metaphorjs/src/func/dom/getWidth.js"),
+    getHeight = require("metaphorjs/src/func/dom/getHeight.js"),
     getOffsetParent = require("metaphorjs/src/func/dom/getOffsetParent.js"),
+    getStyle = require("metaphorjs/src/func/dom/getStyle.js"),
     getAnimationPrefixes = require("metaphorjs-animate/src/func/getAnimationPrefixes.js"),
     async = require("metaphorjs/src/func/async.js"),
     animate = require("metaphorjs-animate/src/metaphorjs.animate.js"),
@@ -123,6 +127,8 @@ module.exports = function () {
             animate:        false
         },
 
+        boundary: null,
+
         callback: {
             context:     null,
             beforestart: null,
@@ -160,15 +166,21 @@ module.exports = function () {
         $constructor: function (cfg) {
             extend(cfg, defaults, false, true);
 
+            var self = this;
+
             if (cfg.helper.tpl || cfg.helper.fn) {
-                this.$plugins.push("draggable.Helper");
+                self.$plugins.push("draggable.Helper");
             }
 
             if (cfg.placeholder.tpl || cfg.placeholder.fn) {
-                this.$plugins.push("draggable.Placeholder");
+                self.$plugins.push("draggable.Placeholder");
             }
 
-            this.$super(cfg);
+            if (cfg.boundary) {
+                self.$plugins.push("draggable.Boundary");
+            }
+
+            self.$super(cfg);
         },
 
         $init: function (cfg) {
@@ -365,7 +377,7 @@ module.exports = function () {
             self.started = true;
 
             self.processStartEvent();
-            self.cacheOffsetParent();
+            self.cacheTargetState();
 
             self.trigger("plugin-start");
 
@@ -385,7 +397,7 @@ module.exports = function () {
             var self = this,
                 e = self.startEvent,
                 node = self.draggable,
-                ofs = getOffset(node),
+                ofs = getPosition(node),
                 cur = self.cursor.position,
                 drag = self.dragState;
 
@@ -426,26 +438,24 @@ module.exports = function () {
             drag.offsetX -= self.cursor.offsetX;
         },
 
-        cacheOffsetParent: function () {
+        cacheTargetState: function () {
 
-            var self = this;
-            /*if (helper.elem) {
-             target.offsetX	= 0;
-             target.offsetY	= 0;
-             }
-             else {*/
+            var self = this,
+                ts = self.targetState,
+                el = self.draggable,
+                op = self.offsetParent || (self.offsetParent = getOffsetParent(el)),
+                pofs = getOffset(op || el),
+                pos = getPosition(el);
 
-            if (self.offsetParent === null) {
-                self.offsetParent = getOffsetParent(self.draggable);
-            }
+            ts.offsetX = pofs.left;
+            ts.offsetY = pofs.top;
+            ts.left = pos.left;
+            ts.top = pos.top;
+            ts.w = getWidth(el);
+            ts.h = getHeight(el);
+            ts.mt = parseInt(getStyle(el, "marginTop"), 10);
+            ts.ml = parseInt(getStyle(el, "marginLeft"), 10);
 
-            var op = self.offsetParent, ofs = getOffset(op || self.draggable);
-
-            self.
-
-                targetState.offsetX = ofs.left;
-            self.targetState.offsetY = ofs.top;
-            //}
         },
 
 
@@ -491,12 +501,6 @@ module.exports = function () {
                     return;
                 }
             }
-            /*if (!drag.draggable) {
-             state.started = false;
-             self.dragStop(e);
-             return;
-             }*/
-
 
             if (self.drag.method == "transform") {
                 self.applyTransform(e);
@@ -506,43 +510,34 @@ module.exports = function () {
             }
 
             self.trigger('drag', self, e);
-        }, applyTransform: function (e) {
+        },
+
+        applyTransform: function (e) {
 
             var self = this,
                 style = self.dragEl.style,
                 ds = self.dragState,
+                ts = self.targetState,
                 transform = "",
                 axis = self.drag.axis,
-                x = e.clientX - ds.offsetX - self.targetState.offsetX,
-                y = e.clientY - ds.offsetY - self.targetState.offsetY;
+                pos = {};
+
+            pos.x = e.clientX - ds.offsetX - ts.left;
+            pos.y = e.clientY - ds.offsetY - ts.top;
+
+            self.trigger("plugin-correct-position", pos, "transform");
 
             if (axis != "x") {
-                transform += " translateY(" + y + "px)";
+                transform += " translateY(" + pos.y + "px)";
             }
             if (axis != "y") {
-                transform += " translateX(" + x + "px)";
+                transform += " translateX(" + pos.x + "px)";
             }
 
-            ds.x = x;
-            ds.y = y;
+            ds.x = pos.x;
+            ds.y = pos.y;
 
             style[transformPrefix] = transform;
-        },
-
-        applyPositionFromTransform: function () {
-
-            var self = this,
-                style = self.dragEl.style,
-                axis = self.drag.axis;
-
-            if (axis != "x") {
-                style.top = self.targetState.offsetY + self.dragState.y + "px";
-            }
-            if (axis != "y") {
-                style.left = self.targetState.offsetX + self.dragState.x + "px";
-            }
-
-            style[transformPrefix] = "";
         },
 
         applyPosition: function (e) {
@@ -551,20 +546,47 @@ module.exports = function () {
                 style = self.dragEl.style,
                 axis = self.drag.axis,
                 ds = self.dragState,
-                x = e.clientX - ds.offsetX,
-                y = e.clientY - ds.offsetY;
+                pos = {};
+
+            pos.x = e.clientX - ds.offsetX;
+            pos.y = e.clientY - ds.offsetY;
+
+            self.trigger("plugin-correct-position", pos, "position");
 
             if (axis != "x") {
-                style.top = y + "px";
+                style.top = pos.y + "px";
             }
 
             if (axis != "y") {
-                style.left = x + "px";
+                style.left = pos.x + "px";
             }
 
-            ds.x = x;
-            ds.y = y;
+            ds.x = pos.x;
+            ds.y = pos.y;
         },
+
+        applyPositionFromTransform: function () {
+
+            var self = this,
+                style = self.dragEl.style,
+                axis = self.drag.axis,
+                ts = self.targetState,
+                pos = {};
+
+            pos.x = ts.left + self.dragState.x;
+            pos.y = ts.top + self.dragState.y;
+
+            if (axis != "x") {
+                style.top = pos.y + "px";
+            }
+            if (axis != "y") {
+                style.left = pos.x + "px";
+            }
+
+            style[transformPrefix] = "";
+        },
+
+
 
         applyFinalPosition: function () {
             var self = this,

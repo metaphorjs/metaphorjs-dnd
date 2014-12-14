@@ -51,8 +51,8 @@ module.exports = defineClass({
             appendTo = cfg.appendTo || drg.draggable.parentNode;
 
         if (cfg.manualPosition !== true) {
-            style.left = trgState.offsetX + "px";
-            style.top = trgState.offsetY + "px";
+            style.left = trgState.left + "px";
+            style.top = trgState.top + "px";
         }
 
         if (cfg.appendTo !== false) {

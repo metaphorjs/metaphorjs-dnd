@@ -2687,6 +2687,80 @@ var getStyle = function(node, prop, numeric) {
 
 
 
+
+function getOffsetParent(node) {
+
+    var html = window.document.documentElement,
+        offsetParent = node.offsetParent || html;
+
+    while (offsetParent && (offsetParent != html &&
+                              getStyle(offsetParent, "position") == "static")) {
+        offsetParent = offsetParent.offsetParent;
+    }
+
+    return offsetParent || html;
+
+};
+
+
+
+function getPosition(node, to) {
+
+    var offsetParent, offset,
+        parentOffset = {top: 0, left: 0},
+        html = window.document.documentElement;
+
+    if (node === window || node === html) {
+        return parentOffset;
+    }
+
+    // Fixed elements are offset from window (parentOffset = {top:0, left: 0},
+    // because it is its only offset parent
+    if (getStyle(node, "position" ) == "fixed") {
+        // Assume getBoundingClientRect is there when computed position is fixed
+        offset = node.getBoundingClientRect();
+    }
+    else if (to) {
+        var thisOffset = getOffset(node),
+            toOffset = getOffset(to),
+            position = {
+                left: thisOffset.left - toOffset.left,
+                top: thisOffset.top - toOffset.top
+            };
+
+        if (position.left < 0) {
+            position.left = 0;
+        }
+        if (position.top < 0) {
+            position.top = 0;
+        }
+        return position;
+    }
+    else {
+        // Get *real* offsetParent
+        offsetParent = getOffsetParent(node);
+
+        // Get correct offsets
+        offset = getOffset(node);
+
+        if (offsetParent !== html) {
+            parentOffset = getOffset(offsetParent);
+        }
+
+        // Add offsetParent borders
+        parentOffset.top += getStyle(offsetParent, "borderTopWidth", true);
+        parentOffset.left += getStyle(offsetParent, "borderLeftWidth", true);
+    }
+
+    // Subtract parent offsets and element margins
+    return {
+        top: offset.top - parentOffset.top - getStyle(node, "marginTop", true),
+        left: offset.left - parentOffset.left - getStyle(node, "marginLeft", true)
+    };
+};
+
+
+
 var boxSizingReliable = function() {
 
     var boxSizingReliableVal;
@@ -2859,20 +2933,10 @@ var getOuterHeight = getDimensions("outer", "Height");
 
 
 
+var getWidth = getDimensions("", "Width");
 
-function getOffsetParent(node) {
 
-    var html = window.document.documentElement,
-        offsetParent = node.offsetParent || html;
-
-    while (offsetParent && (offsetParent != html &&
-                              getStyle(offsetParent, "position") == "static")) {
-        offsetParent = offsetParent.offsetParent;
-    }
-
-    return offsetParent || html;
-
-};
+var getHeight = getDimensions("", "Height");
 
 
 
@@ -5042,6 +5106,8 @@ var Draggable = function () {
             animate:        false
         },
 
+        boundary: null,
+
         callback: {
             context:     null,
             beforestart: null,
@@ -5079,15 +5145,21 @@ var Draggable = function () {
         $constructor: function (cfg) {
             extend(cfg, defaults, false, true);
 
+            var self = this;
+
             if (cfg.helper.tpl || cfg.helper.fn) {
-                this.$plugins.push("draggable.Helper");
+                self.$plugins.push("draggable.Helper");
             }
 
             if (cfg.placeholder.tpl || cfg.placeholder.fn) {
-                this.$plugins.push("draggable.Placeholder");
+                self.$plugins.push("draggable.Placeholder");
             }
 
-            this.$super(cfg);
+            if (cfg.boundary) {
+                self.$plugins.push("draggable.Boundary");
+            }
+
+            self.$super(cfg);
         },
 
         $init: function (cfg) {
@@ -5284,7 +5356,7 @@ var Draggable = function () {
             self.started = true;
 
             self.processStartEvent();
-            self.cacheOffsetParent();
+            self.cacheTargetState();
 
             self.trigger("plugin-start");
 
@@ -5304,7 +5376,7 @@ var Draggable = function () {
             var self = this,
                 e = self.startEvent,
                 node = self.draggable,
-                ofs = getOffset(node),
+                ofs = getPosition(node),
                 cur = self.cursor.position,
                 drag = self.dragState;
 
@@ -5345,26 +5417,24 @@ var Draggable = function () {
             drag.offsetX -= self.cursor.offsetX;
         },
 
-        cacheOffsetParent: function () {
+        cacheTargetState: function () {
 
-            var self = this;
-            /*if (helper.elem) {
-             target.offsetX	= 0;
-             target.offsetY	= 0;
-             }
-             else {*/
+            var self = this,
+                ts = self.targetState,
+                el = self.draggable,
+                op = self.offsetParent || (self.offsetParent = getOffsetParent(el)),
+                pofs = getOffset(op || el),
+                pos = getPosition(el);
 
-            if (self.offsetParent === null) {
-                self.offsetParent = getOffsetParent(self.draggable);
-            }
+            ts.offsetX = pofs.left;
+            ts.offsetY = pofs.top;
+            ts.left = pos.left;
+            ts.top = pos.top;
+            ts.w = getWidth(el);
+            ts.h = getHeight(el);
+            ts.mt = parseInt(getStyle(el, "marginTop"), 10);
+            ts.ml = parseInt(getStyle(el, "marginLeft"), 10);
 
-            var op = self.offsetParent, ofs = getOffset(op || self.draggable);
-
-            self.
-
-                targetState.offsetX = ofs.left;
-            self.targetState.offsetY = ofs.top;
-            //}
         },
 
 
@@ -5410,12 +5480,6 @@ var Draggable = function () {
                     return;
                 }
             }
-            /*if (!drag.draggable) {
-             state.started = false;
-             self.dragStop(e);
-             return;
-             }*/
-
 
             if (self.drag.method == "transform") {
                 self.applyTransform(e);
@@ -5425,43 +5489,34 @@ var Draggable = function () {
             }
 
             self.trigger('drag', self, e);
-        }, applyTransform: function (e) {
+        },
+
+        applyTransform: function (e) {
 
             var self = this,
                 style = self.dragEl.style,
                 ds = self.dragState,
+                ts = self.targetState,
                 transform = "",
                 axis = self.drag.axis,
-                x = e.clientX - ds.offsetX - self.targetState.offsetX,
-                y = e.clientY - ds.offsetY - self.targetState.offsetY;
+                pos = {};
+
+            pos.x = e.clientX - ds.offsetX - ts.left;
+            pos.y = e.clientY - ds.offsetY - ts.top;
+
+            self.trigger("plugin-correct-position", pos, "transform");
 
             if (axis != "x") {
-                transform += " translateY(" + y + "px)";
+                transform += " translateY(" + pos.y + "px)";
             }
             if (axis != "y") {
-                transform += " translateX(" + x + "px)";
+                transform += " translateX(" + pos.x + "px)";
             }
 
-            ds.x = x;
-            ds.y = y;
+            ds.x = pos.x;
+            ds.y = pos.y;
 
             style[transformPrefix] = transform;
-        },
-
-        applyPositionFromTransform: function () {
-
-            var self = this,
-                style = self.dragEl.style,
-                axis = self.drag.axis;
-
-            if (axis != "x") {
-                style.top = self.targetState.offsetY + self.dragState.y + "px";
-            }
-            if (axis != "y") {
-                style.left = self.targetState.offsetX + self.dragState.x + "px";
-            }
-
-            style[transformPrefix] = "";
         },
 
         applyPosition: function (e) {
@@ -5470,20 +5525,47 @@ var Draggable = function () {
                 style = self.dragEl.style,
                 axis = self.drag.axis,
                 ds = self.dragState,
-                x = e.clientX - ds.offsetX,
-                y = e.clientY - ds.offsetY;
+                pos = {};
+
+            pos.x = e.clientX - ds.offsetX;
+            pos.y = e.clientY - ds.offsetY;
+
+            self.trigger("plugin-correct-position", pos, "position");
 
             if (axis != "x") {
-                style.top = y + "px";
+                style.top = pos.y + "px";
             }
 
             if (axis != "y") {
-                style.left = x + "px";
+                style.left = pos.x + "px";
             }
 
-            ds.x = x;
-            ds.y = y;
+            ds.x = pos.x;
+            ds.y = pos.y;
         },
+
+        applyPositionFromTransform: function () {
+
+            var self = this,
+                style = self.dragEl.style,
+                axis = self.drag.axis,
+                ts = self.targetState,
+                pos = {};
+
+            pos.x = ts.left + self.dragState.x;
+            pos.y = ts.top + self.dragState.y;
+
+            if (axis != "x") {
+                style.top = pos.y + "px";
+            }
+            if (axis != "y") {
+                style.left = pos.x + "px";
+            }
+
+            style[transformPrefix] = "";
+        },
+
+
 
         applyFinalPosition: function () {
             var self = this,
@@ -5614,6 +5696,31 @@ var Draggable = function () {
 
 
 
+
+var DraggableBoundaryPlugin = defineClass({
+
+    $class: "draggable.Boundary",
+    drg: null,
+
+    $init: function(draggable) {
+
+        var self = this,
+            boundary = draggable.cfg.boundary;
+
+        self.drg = draggable;
+
+    },
+
+    $beforeHostInit: function(){
+
+        var drg = this.drg;
+
+    }
+
+});
+
+
+
 function toFragment(nodes) {
 
     var fragment = window.document.createDocumentFragment(),
@@ -5694,8 +5801,8 @@ var DraggableHelperPlugin = defineClass({
             appendTo = cfg.appendTo || drg.draggable.parentNode;
 
         if (cfg.manualPosition !== true) {
-            style.left = trgState.offsetX + "px";
-            style.top = trgState.offsetY + "px";
+            style.left = trgState.left + "px";
+            style.top = trgState.top + "px";
         }
 
         if (cfg.appendTo !== false) {
