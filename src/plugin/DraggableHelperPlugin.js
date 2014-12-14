@@ -46,7 +46,7 @@ module.exports = defineClass({
         var self = this,
             drg = self.drg,
             cfg = drg.helper,
-            trgState = drg.targetState,
+            trgState = drg.state,
             style = self.helperEl.style,
             appendTo = cfg.appendTo || drg.draggable.parentNode;
 

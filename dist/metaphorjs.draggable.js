@@ -5139,8 +5139,7 @@ var Draggable = function () {
         started:       false,
         distance:      false,
 
-        dragState:   null,
-        targetState: null,
+        state:          null,
 
         $constructor: function (cfg) {
             extend(cfg, defaults, false, true);
@@ -5176,20 +5175,13 @@ var Draggable = function () {
                 self.drag.method = "position";
             }
 
-            self.dragState = {
+            self.state = {
                 clickX:  null,
                 clickY:  null,
-                startX:  null,
-                startY:  null,
                 offsetX: null,
                 offsetY: null,
                 x:       null,
                 y:       null
-            };
-
-            self.targetState = {
-                offsetX: null,
-                offsetY: null
             };
 
             var h;
@@ -5355,8 +5347,7 @@ var Draggable = function () {
 
             self.started = true;
 
-            self.processStartEvent();
-            self.cacheTargetState();
+            self.cacheState();
 
             self.trigger("plugin-start");
 
@@ -5371,22 +5362,28 @@ var Draggable = function () {
             self.trigger('start', self, se);
         },
 
-        processStartEvent: function () {
+        cacheState: function () {
 
             var self = this,
                 e = self.startEvent,
                 node = self.draggable,
-                ofs = getPosition(node),
                 cur = self.cursor.position,
-                drag = self.dragState;
+                state = self.state,
+                ofs = getOffset(node),
+                pos = getPosition(node);
 
-            drag.clickX = e.clientX;
-            drag.clickY = e.clientY;
-            drag.startX = ofs.left;
-            drag.startY = ofs.top;
-            drag.offsetX = drag.clickX - ofs.left;
-            drag.offsetY = drag.clickY - ofs.top;
-
+            state.clickX = e.clientX;
+            state.clickY = e.clientY;
+            state.x = ofs.left;
+            state.y = ofs.top;
+            state.offsetX = state.clickX - state.x;
+            state.offsetY = state.clickY - state.y;
+            state.left = pos.left;
+            state.top = pos.top;
+            state.w = getWidth(node);
+            state.h = getHeight(node);
+            state.mt = parseInt(getStyle(node, "marginTop"), 10);
+            state.ml = parseInt(getStyle(node, "marginLeft"), 10);
 
             if (cur != 'click') {
 
@@ -5394,47 +5391,27 @@ var Draggable = function () {
                     h = getOuterHeight(node);
 
                 if (cur.indexOf('c') != -1) {
-                    drag.offsetX = w / 2;
-                    drag.offsetY = h / 2;
+                    state.offsetX = w / 2;
+                    state.offsetY = h / 2;
                 }
 
                 if (cur.indexOf('t') != -1) {
-                    drag.offsetY = 0;
+                    state.offsetY = 0;
                 }
                 else if (cur.indexOf('b') != -1) {
-                    drag.offsetY = h;
+                    state.offsetY = h;
                 }
 
                 if (cur.indexOf('l') != -1) {
-                    drag.offsetX = 0;
+                    state.offsetX = 0;
                 }
                 else if (cur.indexOf('r') != -1) {
-                    drag.offsetX = w;
+                    state.offsetX = w;
                 }
             }
 
-            drag.offsetY -= self.cursor.offsetY;
-            drag.offsetX -= self.cursor.offsetX;
-        },
-
-        cacheTargetState: function () {
-
-            var self = this,
-                ts = self.targetState,
-                el = self.draggable,
-                op = self.offsetParent || (self.offsetParent = getOffsetParent(el)),
-                pofs = getOffset(op || el),
-                pos = getPosition(el);
-
-            ts.offsetX = pofs.left;
-            ts.offsetY = pofs.top;
-            ts.left = pos.left;
-            ts.top = pos.top;
-            ts.w = getWidth(el);
-            ts.h = getHeight(el);
-            ts.mt = parseInt(getStyle(el, "marginTop"), 10);
-            ts.ml = parseInt(getStyle(el, "marginLeft"), 10);
-
+            state.offsetY -= self.cursor.offsetY;
+            state.offsetX -= self.cursor.offsetX;
         },
 
 
@@ -5447,7 +5424,7 @@ var Draggable = function () {
         dragMove:          function (e) {
 
             var self = this,
-                drag = self.dragState;
+                state = self.state;
 
             self.lastMoveEvent = e;
 
@@ -5466,8 +5443,8 @@ var Draggable = function () {
 
             if (self.distance) {
 
-                if (Math.abs(e.clientX - drag.clickX) >= self.distance ||
-                    Math.abs(e.clientY - drag.clickY) >= self.distance) {
+                if (Math.abs(e.clientX - state.clickX) >= self.distance ||
+                    Math.abs(e.clientY - state.clickY) >= self.distance) {
 
                     self.distance = false;
                     self.onActualStart(e);
@@ -5491,110 +5468,72 @@ var Draggable = function () {
             self.trigger('drag', self, e);
         },
 
+        calcPosition: function(e) {
+
+            var self = this,
+                state = self.state,
+                pos = {};
+
+            // rel position
+            pos.left = e.clientX - state.offsetX - (state.x - state.left);
+            pos.top = e.clientY - state.offsetY - (state.y - state.top);
+
+            // abs position
+            pos.x = e.clientX - state.offsetX;
+            pos.y = e.clientY - state.offsetY;
+
+            // transform
+            pos.translateX = e.clientX - state.offsetX - state.x;
+            pos.translateY = e.clientY - state.offsetY - state.y;
+
+            /*console.log(
+                "clientX", e.clientX,
+                "offsetX", state.offsetX,
+                "left", state.left,
+                "x", state.x,
+                "translateX", pos.translateX)*/
+            return pos;
+        },
+
         applyTransform: function (e) {
 
             var self = this,
                 style = self.dragEl.style,
-                ds = self.dragState,
-                ts = self.targetState,
                 transform = "",
                 axis = self.drag.axis,
-                pos = {};
-
-            pos.x = e.clientX - ds.offsetX - ts.left;
-            pos.y = e.clientY - ds.offsetY - ts.top;
+                pos = self.calcPosition(e);
 
             self.trigger("plugin-correct-position", pos, "transform");
 
             if (axis != "x") {
-                transform += " translateY(" + pos.y + "px)";
+                transform += " translateY(" + pos.translateY + "px)";
             }
             if (axis != "y") {
-                transform += " translateX(" + pos.x + "px)";
+                transform += " translateX(" + pos.translateX + "px)";
             }
-
-            ds.x = pos.x;
-            ds.y = pos.y;
 
             style[transformPrefix] = transform;
         },
 
-        applyPosition: function (e) {
+        applyPosition: function (e, el, resetTransform) {
 
             var self = this,
-                style = self.dragEl.style,
+                style = (el || self.dragEl).style,
                 axis = self.drag.axis,
-                ds = self.dragState,
-                pos = {};
-
-            pos.x = e.clientX - ds.offsetX;
-            pos.y = e.clientY - ds.offsetY;
+                pos = self.calcPosition(e);
 
             self.trigger("plugin-correct-position", pos, "position");
 
             if (axis != "x") {
-                style.top = pos.y + "px";
+                style.top = pos.top + "px";
             }
 
             if (axis != "y") {
-                style.left = pos.x + "px";
+                style.left = pos.left + "px";
             }
 
-            ds.x = pos.x;
-            ds.y = pos.y;
-        },
-
-        applyPositionFromTransform: function () {
-
-            var self = this,
-                style = self.dragEl.style,
-                axis = self.drag.axis,
-                ts = self.targetState,
-                pos = {};
-
-            pos.x = ts.left + self.dragState.x;
-            pos.y = ts.top + self.dragState.y;
-
-            if (axis != "x") {
-                style.top = pos.y + "px";
-            }
-            if (axis != "y") {
-                style.left = pos.x + "px";
-            }
-
-            style[transformPrefix] = "";
-        },
-
-
-
-        applyFinalPosition: function () {
-            var self = this,
-                style = self.holderEl.style,
-                ds = self.dragState,
-                ts = self.targetState,
-                axis = self.drag.axis;
-
-            if (axis != "x") {
-                style.top = ts.offsetY + ds.y + "px";
-            }
-
-            if (axis != "y") {
-                style.left = ts.offsetX + ds.x + "px";
-            }
-        },
-
-        restoreOriginalPosition: function () {
-
-            var self = this,
-                style = self.dragEl.style,
-                ds = self.dragState;
-
-            if (self.drag.method == "transform") {
-                style[prefixes.transform] = "";
-            }
-            else {
-                style.top = ds.startY + "px";
-                style.left = ds.startX + "px";
+            if (resetTransform) {
+                style[transformPrefix] = "";
             }
         },
 
@@ -5655,20 +5594,21 @@ var Draggable = function () {
         },
 
         positionOnStop: function(e) {
-            var self = this;
+            var self = this,
+                el = self.draggable;
 
             if (self.cls.drag) {
-                removeClass(self.draggable, self.cls.drag);
+                removeClass(el, self.cls.drag);
             }
 
             if (self.end.restore) {
-                self.restoreOriginalPosition();
+                self.applyPosition(self.startEvent, null, true);
             }
-            else if (self.draggable !== self.dragEl) {
-                self.applyFinalPosition();
+            else if (el !== self.dragEl) {
+                self.applyPosition(e, el);
             }
             else if (self.drag.method == "transform") {
-                self.applyPositionFromTransform();
+                self.applyPosition(e, null, true);
             }
 
             self.started = false;
@@ -5796,7 +5736,7 @@ var DraggableHelperPlugin = defineClass({
         var self = this,
             drg = self.drg,
             cfg = drg.helper,
-            trgState = drg.targetState,
+            trgState = drg.state,
             style = self.helperEl.style,
             appendTo = cfg.appendTo || drg.draggable.parentNode;
 
