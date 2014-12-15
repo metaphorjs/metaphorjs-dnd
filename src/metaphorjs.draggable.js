@@ -347,8 +347,8 @@ module.exports = function () {
 
             if (start.distance) {
                 self.distance = start.distance;
-                self.dragState.clickX = se.clientX;
-                self.dragState.clickY = se.clientY;
+                self.state.clickX = se.clientX;
+                self.state.clickY = se.clientY;
             }
             else {
                 self.onActualStart(e);
@@ -401,8 +401,8 @@ module.exports = function () {
             state.offsetY = state.clickY - state.y;
             state.left = pos.left;
             state.top = pos.top;
-            state.w = getWidth(node);
-            state.h = getHeight(node);
+            state.w = getOuterWidth(node);
+            state.h = getOuterHeight(node);
             state.mt = parseInt(getStyle(node, "marginTop"), 10);
             state.ml = parseInt(getStyle(node, "marginLeft"), 10);
 
@@ -507,12 +507,6 @@ module.exports = function () {
             pos.translateX = e.clientX - state.offsetX - state.x;
             pos.translateY = e.clientY - state.offsetY - state.y;
 
-            /*console.log(
-                "clientX", e.clientX,
-                "offsetX", state.offsetX,
-                "left", state.left,
-                "x", state.x,
-                "translateX", pos.translateX)*/
             return pos;
         },
 

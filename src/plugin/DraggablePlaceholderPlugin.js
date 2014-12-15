@@ -55,12 +55,21 @@ module.exports = defineClass({
 
         var self = this,
             drg = self.drg,
+            cfg = drg.placeholder,
             el = drg.draggable,
+            state = drg.state,
             pl = self.placeholderEl;
 
-        pl.style.left = drg.dragState.startX + "px";
-        pl.style.top = drg.dragState.startY + "px";
-        el.parentNode.insertBefore(pl, el);
+        if (cfg.manualPosition != true) {
+            pl.style.left = state.left + "px";
+            pl.style.top = state.top + "px";
+        }
+        if (!cfg.appendTo) {
+            el.parentNode.insertBefore(pl, el);
+        }
+        else {
+            cfg.appendTo.appendChild(pl);
+        }
 
         if (drg.$hasPlugin("draggable.Helper")) {
             el.style.display = "none";

@@ -14,12 +14,25 @@
                 cls: {
                     drag: "dragged"
                 },
-                drag: {
-                    method: "translate"
+                start: {
+                    distance: 0,
+                    delay: 0,
+                    hold: 0
                 },
+                drag: {
+                    method: "translate",
+                    //handle: document.getElementById("handle")
+                },
+                helper: {
+                    tpl: '<div id="helper"></div>'
+                },
+                placeholder: {
+                    tpl: '<div id="placeholder"></div>'
+                },
+                boundary: document.getElementById("boundary"),
                 end: {
                     restore: false,
-                    animate: false
+                    animate: true
                 }
             });
 
@@ -61,6 +74,7 @@
             width: 500px;
             height: 500px;
             position: relative;
+            box-sizing: border-box;
         }
 
         #draggable.dragged {
@@ -88,10 +102,17 @@
             transition: opacity 0.3s;
             opacity: 0;
         }
+
+
+        #stub {
+            width: 1px;
+            height: 1000px;
+        }
     </style>
 </head>
 <body>
 
+    <!--<div id="stub"></div>-->
     <div id="boundary">
         <div id="draggable">
             <div id="handle"></div>

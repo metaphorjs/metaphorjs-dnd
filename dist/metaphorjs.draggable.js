@@ -5326,8 +5326,8 @@ var Draggable = function () {
 
             if (start.distance) {
                 self.distance = start.distance;
-                self.dragState.clickX = se.clientX;
-                self.dragState.clickY = se.clientY;
+                self.state.clickX = se.clientX;
+                self.state.clickY = se.clientY;
             }
             else {
                 self.onActualStart(e);
@@ -5380,8 +5380,8 @@ var Draggable = function () {
             state.offsetY = state.clickY - state.y;
             state.left = pos.left;
             state.top = pos.top;
-            state.w = getWidth(node);
-            state.h = getHeight(node);
+            state.w = getOuterWidth(node);
+            state.h = getOuterHeight(node);
             state.mt = parseInt(getStyle(node, "marginTop"), 10);
             state.ml = parseInt(getStyle(node, "marginLeft"), 10);
 
@@ -5486,12 +5486,6 @@ var Draggable = function () {
             pos.translateX = e.clientX - state.offsetX - state.x;
             pos.translateY = e.clientY - state.offsetY - state.y;
 
-            /*console.log(
-                "clientX", e.clientX,
-                "offsetX", state.offsetX,
-                "left", state.left,
-                "x", state.x,
-                "translateX", pos.translateX)*/
             return pos;
         },
 
@@ -5641,20 +5635,112 @@ var DraggableBoundaryPlugin = defineClass({
 
     $class: "draggable.Boundary",
     drg: null,
+    bndEl: null,
+    bnd: null,
 
     $init: function(draggable) {
 
-        var self = this,
-            boundary = draggable.cfg.boundary;
-
-        self.drg = draggable;
-
+        this.drg = draggable;
     },
 
-    $beforeHostInit: function(){
+    $beforeHostInit: function() {
+        var self = this,
+            drg = self.drg;
+        drg.on("plugin-start", self.onStart, self);
+        drg.on("plugin-correct-position", self.onPosition, self);
+    },
 
-        var drg = this.drg;
+    $afterHostInit: function(){
 
+        var self = this,
+            drg = self.drg,
+            boundary = drg.boundary;
+
+        if (boundary) {
+            if (typeof boundary == "string") {
+                self.bndEl = select(boundary).shift();
+            }
+            else if (boundary.nodeType) {
+                self.bndEl = boundary;
+            }
+            else if (isArray(boundary)) {
+                self.bnd = {
+                    x:  boundary[0],
+                    y:  boundary[1],
+                    x1: boundary[2],
+                    x2: boundary[3]
+                };
+            }
+        }
+    },
+
+    cacheBoundaries: function() {
+        var self = this,
+            el = self.bndEl;
+
+        if (el) {
+            var ofs = getOffset(el),
+                bbox = getStyle(el, "boxSizing") == "border-box";
+
+            if (bbox) {
+                self.bnd = {
+                    x: ofs.left,
+                    y: ofs.top,
+                    x1: ofs.left + getOuterWidth(el),
+                    y1: ofs.top + getOuterHeight(el)
+                };
+            }
+            else {
+                var bt = parseInt(getStyle(el, "borderTop"), 10) ,
+                    bl = parseInt(getStyle(el, "borderLeft"), 10);
+
+                self.bnd = {
+                    x: ofs.left + bl,
+                    y: ofs.top + bt,
+                    x1: ofs.left + bl + getWidth(el),
+                    y1: ofs.top + bt + getHeight(el)
+                };
+            }
+        }
+    },
+
+    onStart: function() {
+        this.cacheBoundaries();
+    },
+
+    onPosition: function(pos) {
+
+        var self = this,
+            state = self.drg.state,
+            bnd = self.bnd,
+            diff,
+            xdiff = 0,
+            ydiff = 0;
+
+        if (!bnd) {
+            return;
+        }
+
+        if (bnd.x != undf && (diff = bnd.x - pos.x) > 0) {
+            xdiff = diff;
+        }
+        if (bnd.x1 != undf && (diff = bnd.x1 - (pos.x + state.w)) < 0) {
+            xdiff = diff;
+        }
+
+        if (bnd.y != undf && (diff = bnd.y - pos.y) > 0) {
+            ydiff = diff;
+        }
+        if (bnd.y1 != undf && (diff = bnd.y1 - (pos.y + state.h)) < 0) {
+            ydiff = diff;
+        }
+
+        pos.x += xdiff;
+        pos.left += xdiff;
+        pos.translateX += xdiff;
+        pos.y += ydiff;
+        pos.top += ydiff;
+        pos.translateY += ydiff;
     }
 
 });
@@ -5867,12 +5953,21 @@ var DraggablePlaceholderPlugin = defineClass({
 
         var self = this,
             drg = self.drg,
+            cfg = drg.placeholder,
             el = drg.draggable,
+            state = drg.state,
             pl = self.placeholderEl;
 
-        pl.style.left = drg.dragState.startX + "px";
-        pl.style.top = drg.dragState.startY + "px";
-        el.parentNode.insertBefore(pl, el);
+        if (cfg.manualPosition != true) {
+            pl.style.left = state.left + "px";
+            pl.style.top = state.top + "px";
+        }
+        if (!cfg.appendTo) {
+            el.parentNode.insertBefore(pl, el);
+        }
+        else {
+            cfg.appendTo.appendChild(pl);
+        }
 
         if (drg.$hasPlugin("draggable.Helper")) {
             el.style.display = "none";
