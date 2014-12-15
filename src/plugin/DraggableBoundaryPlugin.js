@@ -26,8 +26,8 @@ module.exports = defineClass({
     $beforeHostInit: function() {
         var self = this,
             drg = self.drg;
-        drg.on("plugin-start", self.onStart, self);
-        drg.on("plugin-correct-position", self.onPosition, self);
+        drg.on("start", self.onStart, self);
+        drg.on("correct-position", self.onPosition, self);
     },
 
     $afterHostInit: function(){
@@ -88,7 +88,7 @@ module.exports = defineClass({
         this.cacheBoundaries();
     },
 
-    onPosition: function(pos) {
+    onPosition: function(drg, pos) {
 
         var self = this,
             state = self.drg.state,

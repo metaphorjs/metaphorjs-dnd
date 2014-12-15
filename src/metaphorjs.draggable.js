@@ -153,6 +153,7 @@ module.exports = function () {
         holdTmt:       null,
         startEvent:    null,
         lastMoveEvent: null,
+        lastPosition:  null,
         enabled:       true,
         started:       false,
         distance:      false,
@@ -222,7 +223,7 @@ module.exports = function () {
             self.onMousemoveDelegate = bind(self.onMousemove, self);
             self.onMouseupDelegate = bind(self.onMouseup, self);
 
-            self.trigger("plugin-init");
+            self.trigger("init", self);
 
             if (self.enabled) {
                 self.enabled = false;
@@ -232,10 +233,10 @@ module.exports = function () {
 
         enable: function () {
             var self = this;
-            if (!this.enabled) {
-                this.enabled = true;
-                if (self.trigger("plugin-enable") !== false) {
-                    this.setStartEvents("bind");
+            if (!self.enabled) {
+                if (self.trigger("enable", self) !== false) {
+                    self.enabled = true;
+                    self.setStartEvents("bind");
                 }
             }
         },
@@ -243,8 +244,8 @@ module.exports = function () {
         disable: function () {
             var self = this;
             if (self.enabled) {
-                self.enabled = false;
-                if (self.trigger("plugin-disable") !== false) {
+                if (self.trigger("disable", self) !== false) {
+                    self.enabled = false;
                     self.setStartEvents("unbind");
                 }
             }
@@ -318,7 +319,10 @@ module.exports = function () {
 
             self.startEvent = e;
 
-            self.trigger("plugin-before-start");
+            if (self.trigger('before-start', self, e) === false) {
+                self.dragStop(e);
+                return;
+            }
 
             self.setMoveEvents('bind');
 
@@ -342,6 +346,8 @@ module.exports = function () {
             self.delayTmt = null;
             self.holdTmt = null;
 
+            self.trigger("after-delay", self, e);
+
             if (start.distance) {
                 self.distance = start.distance;
                 self.state.clickX = se.clientX;
@@ -358,16 +364,11 @@ module.exports = function () {
             var self = this,
                 se = self.startEvent;
 
-            if (self.trigger('beforestart', self, se) === false) {
-                self.dragStop(e);
-                return;
-            }
-
             self.started = true;
 
             self.cacheState();
 
-            self.trigger("plugin-start");
+            self.trigger("before-actual-start", self, se);
 
             if (self.cls.drag) {
                 addClass(self.draggable, self.cls.drag);
@@ -477,10 +478,10 @@ module.exports = function () {
             }
 
             if (self.drag.method == "transform") {
-                self.applyTransform(e);
+                self.lastPosition = self.applyTransform(e);
             }
             else {
-                self.applyPosition(e);
+                self.lastPosition = self.applyPosition(e);
             }
 
             self.trigger('drag', self, e);
@@ -515,7 +516,7 @@ module.exports = function () {
                 axis = self.drag.axis,
                 pos = self.calcPosition(e);
 
-            self.trigger("plugin-correct-position", pos, "transform");
+            self.trigger("correct-position", self, pos, "transform", e);
 
             if (axis != "x") {
                 transform += " translateY(" + pos.translateY + "px)";
@@ -525,6 +526,8 @@ module.exports = function () {
             }
 
             style[transformPrefix] = transform;
+
+            return pos;
         },
 
         applyPosition: function (e, el, resetTransform) {
@@ -534,7 +537,7 @@ module.exports = function () {
                 axis = self.drag.axis,
                 pos = self.calcPosition(e);
 
-            self.trigger("plugin-correct-position", pos, "position");
+            self.trigger("correct-position", self, pos, "position", e);
 
             if (axis != "x") {
                 style.top = pos.top + "px";
@@ -547,6 +550,8 @@ module.exports = function () {
             if (resetTransform) {
                 style[transformPrefix] = "";
             }
+
+            return pos;
         },
 
 
@@ -581,7 +586,6 @@ module.exports = function () {
                 return;
             }
 
-            self.trigger("plugin-before-end");
             self.trigger('beforeend', self, moveEvent, e);
 
 
@@ -606,30 +610,30 @@ module.exports = function () {
 
         positionOnStop: function(e) {
             var self = this,
-                el = self.draggable;
+                el = self.draggable,
+                pos;
 
             if (self.cls.drag) {
                 removeClass(el, self.cls.drag);
             }
 
             if (self.end.restore) {
-                self.applyPosition(self.startEvent, null, true);
+                pos = self.applyPosition(self.startEvent, null, true);
             }
             else if (el !== self.dragEl) {
-                self.applyPosition(e, el);
+                pos = self.applyPosition(e, el);
             }
             else if (self.drag.method == "transform") {
-                self.applyPosition(e, null, true);
+                pos = self.applyPosition(e, null, true);
             }
 
             self.started = false;
 
-            self.trigger("plugin-end");
-            self.trigger('end', self, e);
+            self.trigger('end', self, e, pos || self.lastPosition);
         },
 
         onEndAnimation: function () {
-            this.trigger("plugin-end-animation");
+            this.trigger("end-animation", this);
         },
 
         destroy: function () {

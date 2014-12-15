@@ -5128,6 +5128,7 @@ var Draggable = function () {
         holdTmt:       null,
         startEvent:    null,
         lastMoveEvent: null,
+        lastPosition:  null,
         enabled:       true,
         started:       false,
         distance:      false,
@@ -5197,7 +5198,7 @@ var Draggable = function () {
             self.onMousemoveDelegate = bind(self.onMousemove, self);
             self.onMouseupDelegate = bind(self.onMouseup, self);
 
-            self.trigger("plugin-init");
+            self.trigger("init", self);
 
             if (self.enabled) {
                 self.enabled = false;
@@ -5207,10 +5208,10 @@ var Draggable = function () {
 
         enable: function () {
             var self = this;
-            if (!this.enabled) {
-                this.enabled = true;
-                if (self.trigger("plugin-enable") !== false) {
-                    this.setStartEvents("bind");
+            if (!self.enabled) {
+                if (self.trigger("enable", self) !== false) {
+                    self.enabled = true;
+                    self.setStartEvents("bind");
                 }
             }
         },
@@ -5218,8 +5219,8 @@ var Draggable = function () {
         disable: function () {
             var self = this;
             if (self.enabled) {
-                self.enabled = false;
-                if (self.trigger("plugin-disable") !== false) {
+                if (self.trigger("disable", self) !== false) {
+                    self.enabled = false;
                     self.setStartEvents("unbind");
                 }
             }
@@ -5293,7 +5294,10 @@ var Draggable = function () {
 
             self.startEvent = e;
 
-            self.trigger("plugin-before-start");
+            if (self.trigger('before-start', self, e) === false) {
+                self.dragStop(e);
+                return;
+            }
 
             self.setMoveEvents('bind');
 
@@ -5317,6 +5321,8 @@ var Draggable = function () {
             self.delayTmt = null;
             self.holdTmt = null;
 
+            self.trigger("after-delay", self, e);
+
             if (start.distance) {
                 self.distance = start.distance;
                 self.state.clickX = se.clientX;
@@ -5333,16 +5339,11 @@ var Draggable = function () {
             var self = this,
                 se = self.startEvent;
 
-            if (self.trigger('beforestart', self, se) === false) {
-                self.dragStop(e);
-                return;
-            }
-
             self.started = true;
 
             self.cacheState();
 
-            self.trigger("plugin-start");
+            self.trigger("before-actual-start", self, se);
 
             if (self.cls.drag) {
                 addClass(self.draggable, self.cls.drag);
@@ -5452,10 +5453,10 @@ var Draggable = function () {
             }
 
             if (self.drag.method == "transform") {
-                self.applyTransform(e);
+                self.lastPosition = self.applyTransform(e);
             }
             else {
-                self.applyPosition(e);
+                self.lastPosition = self.applyPosition(e);
             }
 
             self.trigger('drag', self, e);
@@ -5490,7 +5491,7 @@ var Draggable = function () {
                 axis = self.drag.axis,
                 pos = self.calcPosition(e);
 
-            self.trigger("plugin-correct-position", pos, "transform");
+            self.trigger("correct-position", self, pos, "transform", e);
 
             if (axis != "x") {
                 transform += " translateY(" + pos.translateY + "px)";
@@ -5500,6 +5501,8 @@ var Draggable = function () {
             }
 
             style[transformPrefix] = transform;
+
+            return pos;
         },
 
         applyPosition: function (e, el, resetTransform) {
@@ -5509,7 +5512,7 @@ var Draggable = function () {
                 axis = self.drag.axis,
                 pos = self.calcPosition(e);
 
-            self.trigger("plugin-correct-position", pos, "position");
+            self.trigger("correct-position", self, pos, "position", e);
 
             if (axis != "x") {
                 style.top = pos.top + "px";
@@ -5522,6 +5525,8 @@ var Draggable = function () {
             if (resetTransform) {
                 style[transformPrefix] = "";
             }
+
+            return pos;
         },
 
 
@@ -5556,7 +5561,6 @@ var Draggable = function () {
                 return;
             }
 
-            self.trigger("plugin-before-end");
             self.trigger('beforeend', self, moveEvent, e);
 
 
@@ -5581,30 +5585,30 @@ var Draggable = function () {
 
         positionOnStop: function(e) {
             var self = this,
-                el = self.draggable;
+                el = self.draggable,
+                pos;
 
             if (self.cls.drag) {
                 removeClass(el, self.cls.drag);
             }
 
             if (self.end.restore) {
-                self.applyPosition(self.startEvent, null, true);
+                pos = self.applyPosition(self.startEvent, null, true);
             }
             else if (el !== self.dragEl) {
-                self.applyPosition(e, el);
+                pos = self.applyPosition(e, el);
             }
             else if (self.drag.method == "transform") {
-                self.applyPosition(e, null, true);
+                pos = self.applyPosition(e, null, true);
             }
 
             self.started = false;
 
-            self.trigger("plugin-end");
-            self.trigger('end', self, e);
+            self.trigger('end', self, e, pos || self.lastPosition);
         },
 
         onEndAnimation: function () {
-            this.trigger("plugin-end-animation");
+            this.trigger("end-animation", this);
         },
 
         destroy: function () {
@@ -7101,8 +7105,8 @@ var DraggableBoundaryPlugin = defineClass({
     $beforeHostInit: function() {
         var self = this,
             drg = self.drg;
-        drg.on("plugin-start", self.onStart, self);
-        drg.on("plugin-correct-position", self.onPosition, self);
+        drg.on("start", self.onStart, self);
+        drg.on("correct-position", self.onPosition, self);
     },
 
     $afterHostInit: function(){
@@ -7163,7 +7167,7 @@ var DraggableBoundaryPlugin = defineClass({
         this.cacheBoundaries();
     },
 
-    onPosition: function(pos) {
+    onPosition: function(drg, pos) {
 
         var self = this,
             state = self.drg.state,
@@ -7248,10 +7252,10 @@ var DraggableHelperPlugin = defineClass({
 
     $beforeHostInit: function() {
         var self = this;
-        self.drg.on("plugin-before-start", self.onBeforeStart, self);
-        self.drg.on("plugin-start", self.onStart, self);
-        self.drg.on("plugin-end", self.onEnd, self);
-        self.drg.on("plugin-end-animation", self.onEndAnimation, self);
+        self.drg.on("before-start", self.onBeforeStart, self);
+        self.drg.on("start", self.onStart, self);
+        self.drg.on("end", self.onEnd, self);
+        self.drg.on("end-animation", self.onEndAnimation, self);
     },
 
     createHelper: function() {
@@ -7369,11 +7373,11 @@ var DraggablePlaceholderPlugin = defineClass({
     $beforeHostInit: function() {
 
         var self = this;
-        self.drg.on("plugin-before-start", self.onBeforeStart, self);
-        self.drg.on("plugin-start", self.onStart, self);
-        self.drg.on("plugin-before-end", self.onBeforeEnd, self);
-        self.drg.on("plugin-end", self.onEnd, self);
-        self.drg.on("plugin-end-animation", self.onEndAnimation, self);
+        self.drg.on("before-start", self.onBeforeStart, self);
+        self.drg.on("start", self.onStart, self);
+        self.drg.on("before-end", self.onBeforeEnd, self);
+        self.drg.on("end", self.onEnd, self);
+        self.drg.on("end-animation", self.onEndAnimation, self);
     },
 
     onBeforeStart: function() {

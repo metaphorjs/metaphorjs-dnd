@@ -16,11 +16,11 @@ module.exports = defineClass({
     $beforeHostInit: function() {
 
         var self = this;
-        self.drg.on("plugin-before-start", self.onBeforeStart, self);
-        self.drg.on("plugin-start", self.onStart, self);
-        self.drg.on("plugin-before-end", self.onBeforeEnd, self);
-        self.drg.on("plugin-end", self.onEnd, self);
-        self.drg.on("plugin-end-animation", self.onEndAnimation, self);
+        self.drg.on("before-start", self.onBeforeStart, self);
+        self.drg.on("start", self.onStart, self);
+        self.drg.on("before-end", self.onBeforeEnd, self);
+        self.drg.on("end", self.onEnd, self);
+        self.drg.on("end-animation", self.onEndAnimation, self);
     },
 
     onBeforeStart: function() {
