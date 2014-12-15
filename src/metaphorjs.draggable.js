@@ -12,9 +12,6 @@ var extend = require("metaphorjs/src/func/extend.js"),
     getPosition = require("metaphorjs/src/func/dom/getPosition.js"),
     getOuterWidth = require("metaphorjs/src/func/dom/getOuterWidth.js"),
     getOuterHeight = require("metaphorjs/src/func/dom/getOuterHeight.js"),
-    getWidth = require("metaphorjs/src/func/dom/getWidth.js"),
-    getHeight = require("metaphorjs/src/func/dom/getHeight.js"),
-    getOffsetParent = require("metaphorjs/src/func/dom/getOffsetParent.js"),
     getStyle = require("metaphorjs/src/func/dom/getStyle.js"),
     getAnimationPrefixes = require("metaphorjs-animate/src/func/getAnimationPrefixes.js"),
     async = require("metaphorjs/src/func/async.js"),
@@ -55,7 +52,7 @@ module.exports = function () {
     var blockDocument = function () {
         var doc = window.document;
         addListener(doc, "touchstart", blockHandler);
-        //addListener(doc, "touchmove", blockHandler);
+        addListener(doc, "touchmove", blockHandler);
         addListener(doc, "touchend", blockHandler);
         documentBlocked = true;
     };
@@ -192,7 +189,7 @@ module.exports = function () {
                 blockDocument();
             }
 
-            if (!prefixes.transform) {
+            if (!transformPrefix) {
                 self.drag.method = "position";
             }
 
@@ -565,6 +562,7 @@ module.exports = function () {
 
             self.setMoveEvents('unbind');
 
+            var moveEvent = self.lastMoveEvent;
             self.lastMoveEvent = null;
 
             if (self.delayTmt) {
@@ -584,7 +582,7 @@ module.exports = function () {
             }
 
             self.trigger("plugin-before-end");
-            self.trigger('beforeend', self, e);
+            self.trigger('beforeend', self, moveEvent, e);
 
 
             if (self.end.animate) {
@@ -596,16 +594,14 @@ module.exports = function () {
                     null,
                     function(el, position, stage){
                         if (stage == "active") {
-                            self.positionOnStop(e);
+                            self.positionOnStop(moveEvent);
                         }
                     })
                     .done(self.onEndAnimation, self);
             }
             else {
-                self.positionOnStop(e);
+                self.positionOnStop(moveEvent);
             }
-
-
         },
 
         positionOnStop: function(e) {

@@ -20,7 +20,7 @@
                     hold: 0
                 },
                 drag: {
-                    method: "translate",
+                    method: "transform"
                     //handle: document.getElementById("handle")
                 },
                 helper: {
@@ -32,7 +32,7 @@
                 boundary: document.getElementById("boundary"),
                 end: {
                     restore: false,
-                    animate: true
+                    animate: false
                 }
             });
 
