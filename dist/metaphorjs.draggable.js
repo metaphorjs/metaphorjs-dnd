@@ -7063,19 +7063,126 @@ var Directive = function(){
 
 
 
+function removeAttr(el, name) {
+    return el.removeAttribute(name);
+};
+
+var rToCamelCase = /-./g;
+
+function toCamelCase(str) {
+    return str.replace(rToCamelCase, function(match){
+        return match.charAt(1).toUpperCase();
+    });
+};
+
+
+
+var getNodeData = function() {
+
+    var readDataSet = function(node) {
+        var attrs = node.attributes,
+            dataset = {},
+            i, l, name;
+
+        for (i = 0, l = attrs.length; i < l; i++) {
+            name = attrs[i].name;
+            if (name.indexOf("data-") === 0) {
+                dataset[toCamelCase(name.substr(5))] = attrs[i].value;
+            }
+        }
+
+        return dataset;
+    };
+
+
+    return function(node) {
+
+        if (node.dataset) {
+            return node.dataset;
+        }
+
+        var dataset;
+
+        if ((dataset = data(node, "data")) !== undf) {
+            return dataset;
+        }
+
+        dataset = readDataSet(node);
+        data(node, "data", dataset);
+        return dataset;
+    };
+
+
+}();
+
+
+
+function getNodeConfig(node, scope, expr) {
+
+    var cfg = data(node, "config"),
+        config, dataset, i, val;
+
+    if (cfg) {
+        return cfg;
+    }
+
+    cfg = {};
+
+    if (expr || (expr = getAttr(node, "mjs-config")) !== null) {
+        removeAttr(node, "mjs-config");
+        config = expr ? createGetter(expr)(scope || {}) : {};
+        for (i in config){
+            cfg[i] = config[i];
+        }
+    }
+
+    dataset = getNodeData(node);
+
+    for (i in dataset){
+        val = dataset[i];
+        cfg[i] = val === "" ? true : val;
+    }
+
+    data(node, "config", cfg);
+
+    return cfg;
+};
+
 
 
 Directive.registerAttribute("mjs-draggable", 1000, function(scope, node, expr){
 
-    var cfg = createGetter(expr)(scope) || {};
+    var cfg = createGetter(expr)(scope) || {},
+        nodeCfg = getNodeConfig(node),
+        watcher,
+        draggable,
+        onChange = function(val) {
+            draggable[val ? "enable" : "disable"]();
+        };
+
     cfg.draggable = node;
 
-    var draggable = new Draggable(cfg);
+    if (nodeCfg.draggableIf) {
+        watcher = createWatchable(scope, nodeCfg.draggableIf, onChange);
+        if (!watcher.getLastResult()) {
+            cfg.enabled = false;
+        }
+    }
+
+    draggable = new Draggable(cfg);
 
     return function() {
+
+        if (watcher) {
+            watcher.unsubscribeAndDestroy(onChange, null);
+            watcher = null;
+        }
+
+        onChange = null;
         draggable.$destroy();
         draggable = null;
         cfg = null;
+        nodeCfg = null;
     };
 });
 
