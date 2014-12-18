@@ -43,10 +43,10 @@ module.exports = function () {
     };
 
     var blockHandler = function (e) {
-        e = normalizeEvent(e || window.event);
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
+        //e = normalizeEvent(e || window.event);
+        //e.preventDefault();
+        //e.stopPropagation();
+        //return false;
     };
 
     var blockDocument = function () {
