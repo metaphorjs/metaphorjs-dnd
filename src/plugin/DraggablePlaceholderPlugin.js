@@ -5,7 +5,7 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
 
 module.exports = defineClass({
 
-    $class: "draggable.Placeholder",
+    $class: "$draggable.Placeholder",
     drg: null,
     placeholderEl: null,
 
@@ -71,7 +71,7 @@ module.exports = defineClass({
             cfg.appendTo.appendChild(pl);
         }
 
-        if (drg.$hasPlugin("draggable.Helper")) {
+        if (drg.$hasPlugin("$draggable.Helper")) {
             el.style.display = "none";
         }
     },
@@ -88,7 +88,7 @@ module.exports = defineClass({
                 self.placeholderEl = null;
             }
 
-            if (drg.$hasPlugin("draggable.Helper")) {
+            if (drg.$hasPlugin("$draggable.Helper")) {
                 removeStyle(drg.draggable, "display");
             }
         }
@@ -98,7 +98,7 @@ module.exports = defineClass({
         var self = this,
             drg = self.drg;
 
-        if (drg.$hasPlugin("draggable.Helper") && !drg.end.restore) {
+        if (drg.$hasPlugin("$draggable.Helper") && !drg.end.restore) {
             self.destroyPlaceholder();
             drg.holderEl = drg.draggable;
         }

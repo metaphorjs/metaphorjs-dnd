@@ -13,7 +13,7 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
 
 module.exports = defineClass({
 
-    $class: "draggable.Boundary",
+    $class: "$draggable.Boundary",
     drg: null,
     bndEl: null,
     bnd: null,

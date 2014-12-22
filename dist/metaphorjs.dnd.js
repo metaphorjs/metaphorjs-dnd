@@ -736,6 +736,7 @@ var Class = function(){
             }
 
             prototype.$plugins = null;
+            prototype.$pluginMap = null;
 
             if (pp.$beforeInit) {
                 prototype.$beforeInit = pp.$beforeInit.slice();
@@ -793,13 +794,14 @@ var Class = function(){
                     newArgs,
                     i, l,
                     plugins, plugin,
+                    pmap,
                     plCls;
 
                 if (!self) {
                     throw "Must instantiate via new";
                 }
 
-                self.$plugins = [];
+                self.$plugins   = [];
 
                 newArgs = self[constr].apply(self, arguments);
 
@@ -808,6 +810,7 @@ var Class = function(){
                 }
 
                 plugins = self.$plugins;
+                pmap    = self.$pluginMap = {};
 
                 for (i = -1, l = self.$beforeInit.length; ++i < l;
                      before.push([self.$beforeInit[i], self])) {}
@@ -830,6 +833,8 @@ var Class = function(){
                         }
 
                         plugin = new plugin(self, args);
+
+                        pmap[plugin.$class] = plugin;
 
                         if (plugin.$beforeHostInit) {
                             before.push([plugin.$beforeHostInit, plugin]);
@@ -872,6 +877,7 @@ var Class = function(){
             $class: null,
             $extends: null,
             $plugins: null,
+            $pluginMap: null,
             $mixins: null,
 
             $destroyed: false,
@@ -935,17 +941,15 @@ var Class = function(){
              * @returns {bool}
              */
             $hasPlugin: function(cls) {
-                var pls = this.$plugins,
-                    i, l;
-                if (!cls) {
-                    return pls.length > 0;
-                }
-                for (i = 0, l = pls.length; i < l; i++) {
-                    if (isInstanceOf(pls[i], cls)) {
-                        return true;
-                    }
-                }
-                return false;
+                return !!this.$pluginMap[ns.normalize(cls)];
+            },
+
+            /**
+             * @param {string} cls
+             * @returns {object|null}
+             */
+            $getPlugin: function(cls) {
+                return this.$pluginMap[ns.normalize(cls)] || null;
             },
 
             /**
@@ -2147,10 +2151,11 @@ var ObservableMixin = ns.add("mixin.Observable", {
 
         if (cfg && cfg.callback) {
             var ls = cfg.callback,
-                context = ls.context,
+                context = ls.context || ls.scope,
                 i;
 
             ls.context = null;
+            ls.scope = null;
 
             for (i in ls) {
                 if (ls[i]) {
@@ -2187,7 +2192,7 @@ var ObservableMixin = ns.add("mixin.Observable", {
     },
 
     $beforeDestroy: function() {
-        this.$$observable.trigger("beforedestroy", this);
+        this.$$observable.trigger("before-destroy", this);
     },
 
     $afterDestroy: function() {
@@ -2197,6 +2202,7 @@ var ObservableMixin = ns.add("mixin.Observable", {
         self.$$observable = null;
     }
 });
+
 
 function returnFalse() {
     return false;
@@ -5080,10 +5086,8 @@ var Draggable = function () {
             offsetY:  0
         },
 
-        drop: {
-            enable: false,
-            to:     null 	// fn|[dom|jquery|selector|droppable]
-        },
+        drop: null, 	// fn|[dom|jquery|selector|droppable]
+
 
         events: {
             "*": {
@@ -5154,15 +5158,19 @@ var Draggable = function () {
             var self = this;
 
             if (cfg.helper.tpl || cfg.helper.fn) {
-                self.$plugins.push("draggable.Helper");
+                self.$plugins.push("$draggable.Helper");
             }
 
             if (cfg.placeholder.tpl || cfg.placeholder.fn) {
-                self.$plugins.push("draggable.Placeholder");
+                self.$plugins.push("$draggable.Placeholder");
             }
 
             if (cfg.boundary) {
-                self.$plugins.push("draggable.Boundary");
+                self.$plugins.push("$draggable.Boundary");
+            }
+
+            if (cfg.drop) {
+                self.$plugins.push("$draggable.Drop");
             }
 
             self.$super(cfg);
@@ -5210,6 +5218,7 @@ var Draggable = function () {
             self.onMousedownDelegate = bind(self.onMousedown, self);
             self.onMousemoveDelegate = bind(self.onMousemove, self);
             self.onMouseupDelegate = bind(self.onMouseup, self);
+            self.onScrollDelegate = bind(self.onScroll, self);
 
             self.trigger("init", self);
 
@@ -5217,6 +5226,11 @@ var Draggable = function () {
                 self.enabled = false;
                 self.enable();
             }
+        },
+
+
+        getElem: function() {
+            return this.draggable;
         },
 
         enable: function () {
@@ -5260,6 +5274,7 @@ var Draggable = function () {
 
             fn(html, "mousemove", self.onMousemoveDelegate);
             fn(html, "mouseup", self.onMouseupDelegate);
+            fn(window, "scroll", self.onScrollDelegate);
 
             if (touchSupported) {
                 fn(node, "touchmove", self.onMousemoveDelegate);
@@ -5428,7 +5443,11 @@ var Draggable = function () {
             return this.processEvent(e);
         },
 
-        dragMove:          function (e) {
+        onScroll: function() {
+            this.dragMove(this.lastMoveEvent);
+        },
+
+        dragMove:  function (e) {
 
             var self = this,
                 state = self.state;
@@ -5472,26 +5491,28 @@ var Draggable = function () {
                 self.lastPosition = self.applyPosition(e);
             }
 
-            self.trigger('drag', self, e);
+            self.trigger('drag', self, e, self.lastPosition);
         },
 
         calcPosition: function(e) {
 
             var self = this,
                 state = self.state,
-                pos = {};
+                pos = {},
+                st = getScrollTop(window),
+                sl = getScrollLeft(window);
 
             // rel position
-            pos.left = e.clientX - state.offsetX - (state.x - state.left);
-            pos.top = e.clientY - state.offsetY - (state.y - state.top);
+            pos.left = sl + e.clientX - state.offsetX - (state.x - state.left);
+            pos.top = st + e.clientY - state.offsetY - (state.y - state.top);
 
             // abs position
-            pos.x = e.clientX - state.offsetX;
-            pos.y = e.clientY - state.offsetY;
+            pos.x = sl + e.clientX - state.offsetX;
+            pos.y = st + e.clientY - state.offsetY;
 
             // transform
-            pos.translateX = e.clientX - state.offsetX - state.x;
-            pos.translateY = e.clientY - state.offsetY - state.y;
+            pos.translateX = sl + e.clientX - state.offsetX - state.x;
+            pos.translateY = st + e.clientY - state.offsetY - state.y;
 
             return pos;
         },
@@ -5574,7 +5595,7 @@ var Draggable = function () {
                 return;
             }
 
-            self.trigger('beforeend', self, moveEvent, e);
+            self.trigger('before-end', self, moveEvent, e);
 
 
             if (self.end.animate) {
@@ -5635,6 +5656,213 @@ var Draggable = function () {
 
 
 }();
+
+
+
+/**
+ * @param {Element} el
+ * @param {String} selector
+ * @returns {boolean}
+ */
+var is = select.is;
+
+
+
+
+var Droppable = (function(){
+
+    var defaults = {
+        accept: true,
+        cls: {
+            active: null,
+            over: null
+        },
+        callback: {
+            context: null
+        }
+    };
+
+    var all = [];
+
+    var Droppable = defineClass({
+
+        $class:  "Draggable",
+        $mixins: [ObservableMixin],
+        node: null,
+        enabled: true,
+        active: false,
+        accepted: null,
+
+        $init: function(cfg) {
+
+            var self = this;
+
+            extend(cfg, defaults, false, true);
+            extend(self, cfg, true, false);
+
+            all.push(self);
+
+            self.trigger("init", self);
+
+            if (self.enabled) {
+                self.enabled = false;
+                self.enable();
+            }
+        },
+
+        isEnabled: function() {
+            return this.enabled;
+        },
+
+        enable: function () {
+            var self = this;
+            if (!self.enabled) {
+                if (self.trigger("enable", self) !== false) {
+                    self.enabled = true;
+                }
+            }
+        },
+
+        disable: function () {
+            var self = this;
+            if (self.enabled) {
+                if (self.trigger("disable", self) !== false) {
+                    self.enabled = false;
+                }
+            }
+        },
+
+
+
+        accepts: function(draggable) {
+
+            var self    = this,
+                a	    = self.accept;
+
+            if (a === true || a === false) {
+                return a;
+            }
+
+            if (typeof a == 'string') {
+                return is(draggable.getElem(), a);
+            }
+
+            if (isFunction(a)) {
+                return a.call(self.$$callbackContext, self, draggable);
+            }
+
+            var elem = draggable.getElem();
+
+            return a == elem;
+        },
+
+
+        setCurrentDraggable: function(drg) {
+
+            var self = this;
+
+            if (self.accepts(drg)) {
+
+                drg.on('end', self.releaseDraggable, self);
+
+                if (self.cls.active) {
+                    addClass(self.node, self.cls.active);
+                }
+
+                self.active = true;
+                self.accepted = drg;
+
+                self.trigger('activate', self, drg);
+
+                return true;
+            }
+
+            return false;
+        },
+
+        setDraggableOver: function(drg) {
+            var self = this;
+            if (self.active && self.accepted == drg) {
+                if (self.cls.over) {
+                    addClass(self.node, self.cls.over);
+                }
+            }
+        },
+
+        setDraggableOut: function(drg) {
+            var self = this;
+            if (self.active && self.accepted == drg) {
+                if (self.cls.over) {
+                    removeClass(self.node, self.cls.over);
+                }
+            }
+        },
+
+        getCoords: function() {
+
+            var self = this,
+                el	= self.node,
+                ofs	= getOffset(el),
+                coords = {};
+
+            coords.x	= ofs.left;
+            coords.y	= ofs.top;
+            coords.w	= getOuterWidth(el);
+            coords.h	= getOuterHeight(el);
+            coords.x1	= coords.x + coords.w;
+            coords.y1	= coords.y + coords.h;
+
+            return coords;
+        },
+
+        drop: function(drg) {
+            var self = this;
+            if (self.active && self.accepted == drg) {
+                self.trigger('drop', self, drg);
+            }
+        },
+
+        releaseDraggable: function(drg) {
+
+            var self = this;
+
+            drg.un('end', self.releaseDraggable, self);
+
+            self.active = false;
+            self.accepted = null;
+
+            if (self.cls.active) {
+                removeClass(self.node, self.cls.active);
+            }
+            if (self.cls.over) {
+                removeClass(self.node, self.cls.over);
+            }
+
+            self.trigger('deactivate', self);
+        },
+
+        destroy: function() {
+
+            var self = this;
+
+            if (self.accepted) {
+                self.releaseDraggable(self.accepted);
+            }
+
+            var inx = all.indexOf(self);
+            all.splice(inx, 1);
+        }
+    }, {
+
+
+        getAll: function() {
+            return all;
+        }
+    });
+
+
+    return Droppable;
+}());
 
 
 
@@ -7201,7 +7429,6 @@ Directive.registerAttribute("mjs-draggable", 1000, function(scope, node, expr){
 
 
 
-
 var getWidth = getDimensions("", "Width");
 
 
@@ -7212,7 +7439,7 @@ var getHeight = getDimensions("", "Height");
 
 var DraggableBoundaryPlugin = defineClass({
 
-    $class: "draggable.Boundary",
+    $class: "$draggable.Boundary",
     drg: null,
     bndEl: null,
     bnd: null,
@@ -7326,6 +7553,114 @@ var DraggableBoundaryPlugin = defineClass({
 
 
 
+
+var DraggableDropPlugin = defineClass({
+
+    $class: "$draggable.Drop",
+    drg: null,
+    droppables: null,
+
+    $init: function(draggable) {
+        var self = this;
+        self.drg = draggable;
+        self.droppables = [];
+    },
+
+
+    $beforeHostInit: function() {
+        var self = this;
+
+        self.drg.on("start", self.onStart, self);
+        self.drg.on("end", self.onEnd, self);
+        self.drg.on("drag", self.onDrag, self);
+    },
+
+    onStart: function(drg, e) {
+
+        var self    = this,
+            to		= drg.drop,
+            drps	= isFunction(to) ?
+                            to.call(drg.$$callbackContext, drg) :
+                            Droppable.getAll(),
+            i, l;
+
+        for (i = 0, l = drps.length; i < l; i++) {
+
+            if (!drps[i]) {
+                continue;
+            }
+
+            if (drps[i].isEnabled() && drps[i].setCurrentDraggable(drg)) {
+
+                self.droppables.push({
+                    drp: 	drps[i],
+                    coords: drps[i].getCoords(),
+                    over:	false
+                });
+            }
+        }
+
+        self.checkDroppables(e.pageX, e.pageY);
+    },
+
+    onDrag: function(drg, e, pos) {
+        this.checkDroppables(pos.x, pos.y);
+    },
+
+    onEnd: function() {
+        this.releaseDroppables();
+    },
+
+    checkDroppables: function(x, y) {
+
+        var self    = this,
+            drg     = self.drg,
+            drps    = self.droppables,
+            i, l;
+
+        for (i = 0, l = drps.length; i < l; i++) {
+
+            var d		= drps[i],
+                coord	= d.coords,
+                over	= d.over;
+
+            if (coord.x <= x && coord.x1 >= x && coord.y <= y && coord.y1 >= y) {
+                if (!over) {
+                    d.drp.setDraggableOver(drg);
+                    d.over = true;
+                }
+            }
+            else {
+                if (over) {
+                    d.drp.setDraggableOut(drg);
+                    d.over = false;
+                }
+            }
+        }
+    },
+
+    releaseDroppables: function() {
+
+        var self    = this,
+            drg     = self.drg,
+            drps    = self.droppables,
+            i, l, d;
+
+        for (i = 0, l = drps.length; i < l; i++) {
+
+            d = drps[i];
+            if (d.over) {
+                drg.trigger('drop', drg, d.drp);
+                d.drp.drop(drg);
+            }
+        }
+
+        self.droppables = [];
+    }
+});
+
+
+
 function toFragment(nodes) {
 
     var fragment = window.document.createDocumentFragment(),
@@ -7360,7 +7695,7 @@ function toFragment(nodes) {
 
 
 var DraggableHelperPlugin = defineClass({
-    $class: "draggable.Helper",
+    $class: "$draggable.Helper",
 
     drg: null,
     helperEl: null,
@@ -7482,7 +7817,7 @@ var removeStyle = (function() {
 
 var DraggablePlaceholderPlugin = defineClass({
 
-    $class: "draggable.Placeholder",
+    $class: "$draggable.Placeholder",
     drg: null,
     placeholderEl: null,
 
@@ -7548,7 +7883,7 @@ var DraggablePlaceholderPlugin = defineClass({
             cfg.appendTo.appendChild(pl);
         }
 
-        if (drg.$hasPlugin("draggable.Helper")) {
+        if (drg.$hasPlugin("$draggable.Helper")) {
             el.style.display = "none";
         }
     },
@@ -7565,7 +7900,7 @@ var DraggablePlaceholderPlugin = defineClass({
                 self.placeholderEl = null;
             }
 
-            if (drg.$hasPlugin("draggable.Helper")) {
+            if (drg.$hasPlugin("$draggable.Helper")) {
                 removeStyle(drg.draggable, "display");
             }
         }
@@ -7575,7 +7910,7 @@ var DraggablePlaceholderPlugin = defineClass({
         var self = this,
             drg = self.drg;
 
-        if (drg.$hasPlugin("draggable.Helper") && !drg.end.restore) {
+        if (drg.$hasPlugin("$draggable.Helper") && !drg.end.restore) {
             self.destroyPlaceholder();
             drg.holderEl = drg.draggable;
         }
@@ -7653,6 +7988,7 @@ function onReady(fn, w) {
     }
 };
 MetaphorJs['Draggable'] = Draggable;
+MetaphorJs['Droppable'] = Droppable;
 MetaphorJs['onReady'] = onReady;
 typeof global != "undefined" ? (global['MetaphorJs'] = MetaphorJs) : (window['MetaphorJs'] = MetaphorJs);
 

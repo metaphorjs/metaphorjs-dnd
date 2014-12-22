@@ -12,6 +12,8 @@ var extend = require("metaphorjs/src/func/extend.js"),
     getPosition = require("metaphorjs/src/func/dom/getPosition.js"),
     getOuterWidth = require("metaphorjs/src/func/dom/getOuterWidth.js"),
     getOuterHeight = require("metaphorjs/src/func/dom/getOuterHeight.js"),
+    getScrollTop = require("metaphorjs/src/func/dom/getScrollTop.js"),
+    getScrollLeft = require("metaphorjs/src/func/dom/getScrollLeft.js"),
     getStyle = require("metaphorjs/src/func/dom/getStyle.js"),
     getAnimationPrefixes = require("metaphorjs-animate/src/func/getAnimationPrefixes.js"),
     async = require("metaphorjs/src/func/async.js"),
@@ -92,10 +94,8 @@ module.exports = function () {
             offsetY:  0
         },
 
-        drop: {
-            enable: false,
-            to:     null 	// fn|[dom|jquery|selector|droppable]
-        },
+        drop: null, 	// fn|[dom|jquery|selector|droppable]
+
 
         events: {
             "*": {
@@ -166,15 +166,19 @@ module.exports = function () {
             var self = this;
 
             if (cfg.helper.tpl || cfg.helper.fn) {
-                self.$plugins.push("draggable.Helper");
+                self.$plugins.push("$draggable.Helper");
             }
 
             if (cfg.placeholder.tpl || cfg.placeholder.fn) {
-                self.$plugins.push("draggable.Placeholder");
+                self.$plugins.push("$draggable.Placeholder");
             }
 
             if (cfg.boundary) {
-                self.$plugins.push("draggable.Boundary");
+                self.$plugins.push("$draggable.Boundary");
+            }
+
+            if (cfg.drop) {
+                self.$plugins.push("$draggable.Drop");
             }
 
             self.$super(cfg);
@@ -222,6 +226,7 @@ module.exports = function () {
             self.onMousedownDelegate = bind(self.onMousedown, self);
             self.onMousemoveDelegate = bind(self.onMousemove, self);
             self.onMouseupDelegate = bind(self.onMouseup, self);
+            self.onScrollDelegate = bind(self.onScroll, self);
 
             self.trigger("init", self);
 
@@ -229,6 +234,11 @@ module.exports = function () {
                 self.enabled = false;
                 self.enable();
             }
+        },
+
+
+        getElem: function() {
+            return this.draggable;
         },
 
         enable: function () {
@@ -272,6 +282,7 @@ module.exports = function () {
 
             fn(html, "mousemove", self.onMousemoveDelegate);
             fn(html, "mouseup", self.onMouseupDelegate);
+            fn(window, "scroll", self.onScrollDelegate);
 
             if (touchSupported) {
                 fn(node, "touchmove", self.onMousemoveDelegate);
@@ -440,7 +451,11 @@ module.exports = function () {
             return this.processEvent(e);
         },
 
-        dragMove:          function (e) {
+        onScroll: function() {
+            this.dragMove(this.lastMoveEvent);
+        },
+
+        dragMove:  function (e) {
 
             var self = this,
                 state = self.state;
@@ -484,26 +499,28 @@ module.exports = function () {
                 self.lastPosition = self.applyPosition(e);
             }
 
-            self.trigger('drag', self, e);
+            self.trigger('drag', self, e, self.lastPosition);
         },
 
         calcPosition: function(e) {
 
             var self = this,
                 state = self.state,
-                pos = {};
+                pos = {},
+                st = getScrollTop(window),
+                sl = getScrollLeft(window);
 
             // rel position
-            pos.left = e.clientX - state.offsetX - (state.x - state.left);
-            pos.top = e.clientY - state.offsetY - (state.y - state.top);
+            pos.left = sl + e.clientX - state.offsetX - (state.x - state.left);
+            pos.top = st + e.clientY - state.offsetY - (state.y - state.top);
 
             // abs position
-            pos.x = e.clientX - state.offsetX;
-            pos.y = e.clientY - state.offsetY;
+            pos.x = sl + e.clientX - state.offsetX;
+            pos.y = st + e.clientY - state.offsetY;
 
             // transform
-            pos.translateX = e.clientX - state.offsetX - state.x;
-            pos.translateY = e.clientY - state.offsetY - state.y;
+            pos.translateX = sl + e.clientX - state.offsetX - state.x;
+            pos.translateY = st + e.clientY - state.offsetY - state.y;
 
             return pos;
         },
@@ -586,7 +603,7 @@ module.exports = function () {
                 return;
             }
 
-            self.trigger('beforeend', self, moveEvent, e);
+            self.trigger('before-end', self, moveEvent, e);
 
 
             if (self.end.animate) {

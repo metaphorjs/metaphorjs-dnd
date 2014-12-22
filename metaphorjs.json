@@ -7,17 +7,23 @@
   ],
 
   "build": {
-    "standalone-draggable": {
+    "standalone": {
       "wrap": true,
       "global": true,
       "auto": true,
-      "target": "dist/metaphorjs.draggable.js",
+      "target": "dist/metaphorjs.dnd.js",
       "files": [
         "metaphorjs/src/MetaphorJs.js",
         [
           "src/metaphorjs.draggable.js",
           {
             "as": "Draggable"
+          }
+        ],
+        [
+          "src/metaphorjs.droppable.js",
+          {
+            "as": "Droppable"
           }
         ],
         [
@@ -35,6 +41,7 @@
       ],
       "expose": [
         "Draggable",
+        "Droppable",
         "onReady"
       ]
     }
