@@ -106,6 +106,7 @@ module.exports = defineClass({
 
             d = drps[i];
             if (d.over) {
+                drg.trigger('before-drop', drg, d.drp);
                 drg.trigger('drop', drg, d.drp);
                 d.drp.drop(drg);
             }

@@ -50,6 +50,8 @@ module.exports = (function(){
                 self.enabled = false;
                 self.enable();
             }
+
+            self.droppable.$$droppable = self;
         },
 
         isEnabled: function() {
@@ -190,6 +192,8 @@ module.exports = (function(){
         destroy: function() {
 
             var self = this;
+
+            self.droppable.$$droppable = null;
 
             if (self.accepted) {
                 self.releaseDraggable(self.accepted);

@@ -5037,10 +5037,10 @@ var Draggable = function () {
     };
 
     var blockHandler = function (e) {
-        //e = normalizeEvent(e || window.event);
-        //e.preventDefault();
-        //e.stopPropagation();
-        //return false;
+        e = normalizeEvent(e || window.event);
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
     };
 
     var blockDocument = function () {
@@ -5055,7 +5055,7 @@ var Draggable = function () {
     var defaults = {
 
         draggable:           null,
-        blockDocumentEvents: true,
+        blockDocumentEvents: false,
 
         cls: {
             drag: null
@@ -5214,6 +5214,8 @@ var Draggable = function () {
 
             self.dragEl = self.draggable;
             self.holderEl = self.draggable;
+
+            self.draggable.$$draggable = self;
 
             self.onMousedownDelegate = bind(self.onMousedown, self);
             self.onMousemoveDelegate = bind(self.onMousemove, self);
@@ -5648,7 +5650,7 @@ var Draggable = function () {
         destroy: function () {
 
             this.disable();
-
+            this.draggable.$draggable = null;
         }
 
 
@@ -5708,6 +5710,8 @@ var Droppable = (function(){
                 self.enabled = false;
                 self.enable();
             }
+
+            self.droppable.$$droppable = self;
         },
 
         isEnabled: function() {
@@ -5848,6 +5852,8 @@ var Droppable = (function(){
         destroy: function() {
 
             var self = this;
+
+            self.droppable.$$droppable = null;
 
             if (self.accepted) {
                 self.releaseDraggable(self.accepted);
@@ -7428,6 +7434,7 @@ Directive.registerAttribute("mjs-draggable", 1000, function(scope, node, expr){
         draggable = null;
         cfg = null;
         nodeCfg = null;
+        node = null;
     };
 });
 
@@ -7699,6 +7706,7 @@ var DraggableDropPlugin = defineClass({
 
             d = drps[i];
             if (d.over) {
+                drg.trigger('before-drop', drg, d.drp);
                 drg.trigger('drop', drg, d.drp);
                 d.drp.drop(drg);
             }

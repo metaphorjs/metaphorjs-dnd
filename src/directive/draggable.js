@@ -38,5 +38,6 @@ Directive.registerAttribute("mjs-draggable", 1000, function(scope, node, expr){
         draggable = null;
         cfg = null;
         nodeCfg = null;
+        node = null;
     };
 });

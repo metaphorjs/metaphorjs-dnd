@@ -45,10 +45,10 @@ module.exports = function () {
     };
 
     var blockHandler = function (e) {
-        //e = normalizeEvent(e || window.event);
-        //e.preventDefault();
-        //e.stopPropagation();
-        //return false;
+        e = normalizeEvent(e || window.event);
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
     };
 
     var blockDocument = function () {
@@ -63,7 +63,7 @@ module.exports = function () {
     var defaults = {
 
         draggable:           null,
-        blockDocumentEvents: true,
+        blockDocumentEvents: false,
 
         cls: {
             drag: null
@@ -222,6 +222,8 @@ module.exports = function () {
 
             self.dragEl = self.draggable;
             self.holderEl = self.draggable;
+
+            self.draggable.$$draggable = self;
 
             self.onMousedownDelegate = bind(self.onMousedown, self);
             self.onMousemoveDelegate = bind(self.onMousemove, self);
@@ -656,7 +658,7 @@ module.exports = function () {
         destroy: function () {
 
             this.disable();
-
+            this.draggable.$draggable = null;
         }
 
 
