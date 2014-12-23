@@ -5362,7 +5362,7 @@ var Draggable = function () {
             }
         },
 
-        onActualStart: function (e) {
+        onActualStart: function(e) {
 
             var self = this,
                 se = self.startEvent;
@@ -5688,7 +5688,7 @@ var Droppable = (function(){
 
         $class:  "Draggable",
         $mixins: [ObservableMixin],
-        node: null,
+        droppable: null,
         enabled: true,
         active: false,
         accepted: null,
@@ -5761,12 +5761,16 @@ var Droppable = (function(){
 
             var self = this;
 
+            if (self.accepted === drg) {
+                return true;
+            }
+
             if (self.accepts(drg)) {
 
                 drg.on('end', self.releaseDraggable, self);
 
                 if (self.cls.active) {
-                    addClass(self.node, self.cls.active);
+                    addClass(self.droppable, self.cls.active);
                 }
 
                 self.active = true;
@@ -5784,7 +5788,7 @@ var Droppable = (function(){
             var self = this;
             if (self.active && self.accepted == drg) {
                 if (self.cls.over) {
-                    addClass(self.node, self.cls.over);
+                    addClass(self.droppable, self.cls.over);
                 }
             }
         },
@@ -5793,7 +5797,7 @@ var Droppable = (function(){
             var self = this;
             if (self.active && self.accepted == drg) {
                 if (self.cls.over) {
-                    removeClass(self.node, self.cls.over);
+                    removeClass(self.droppable, self.cls.over);
                 }
             }
         },
@@ -5801,7 +5805,7 @@ var Droppable = (function(){
         getCoords: function() {
 
             var self = this,
-                el	= self.node,
+                el	= self.droppable,
                 ofs	= getOffset(el),
                 coords = {};
 
@@ -5832,10 +5836,10 @@ var Droppable = (function(){
             self.accepted = null;
 
             if (self.cls.active) {
-                removeClass(self.node, self.cls.active);
+                removeClass(self.droppable, self.cls.active);
             }
             if (self.cls.over) {
-                removeClass(self.node, self.cls.over);
+                removeClass(self.droppable, self.cls.over);
             }
 
             self.trigger('deactivate', self);
@@ -7429,6 +7433,44 @@ Directive.registerAttribute("mjs-draggable", 1000, function(scope, node, expr){
 
 
 
+Directive.registerAttribute("mjs-droppable", 1000, function(scope, node, expr){
+
+    var cfg = createGetter(expr)(scope) || {},
+        nodeCfg = getNodeConfig(node),
+        watcher,
+        droppable,
+        onChange = function(val) {
+            droppable[val ? "enable" : "disable"]();
+        };
+
+    cfg.droppable = node;
+
+    if (nodeCfg.droppableIf) {
+        watcher = createWatchable(scope, nodeCfg.droppableIf, onChange);
+        if (!watcher.getLastResult()) {
+            cfg.enabled = false;
+        }
+    }
+
+    droppable = new Droppable(cfg);
+
+    return function() {
+
+        if (watcher) {
+            watcher.unsubscribeAndDestroy(onChange, null);
+            watcher = null;
+        }
+
+        onChange = null;
+        droppable.$destroy();
+        droppable = null;
+        cfg = null;
+        nodeCfg = null;
+    };
+});
+
+
+
 var getWidth = getDimensions("", "Width");
 
 
@@ -7576,13 +7618,20 @@ var DraggableDropPlugin = defineClass({
     },
 
     onStart: function(drg, e) {
+        this.initDroppables(e);
+    },
+
+    initDroppables: function(e) {
 
         var self    = this,
+            drg     = self.drg,
             to		= drg.drop,
             drps	= isFunction(to) ?
-                            to.call(drg.$$callbackContext, drg) :
-                            Droppable.getAll(),
+                        to.call(drg.$$callbackContext, drg) :
+                        Droppable.getAll(),
             i, l;
+
+        e = e || drg.lastMoveEvent || drg.startEvent;
 
         for (i = 0, l = drps.length; i < l; i++) {
 

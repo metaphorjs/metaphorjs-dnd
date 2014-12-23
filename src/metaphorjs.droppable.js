@@ -30,7 +30,7 @@ module.exports = (function(){
 
         $class:  "Draggable",
         $mixins: [ObservableMixin],
-        node: null,
+        droppable: null,
         enabled: true,
         active: false,
         accepted: null,
@@ -103,12 +103,16 @@ module.exports = (function(){
 
             var self = this;
 
+            if (self.accepted === drg) {
+                return true;
+            }
+
             if (self.accepts(drg)) {
 
                 drg.on('end', self.releaseDraggable, self);
 
                 if (self.cls.active) {
-                    addClass(self.node, self.cls.active);
+                    addClass(self.droppable, self.cls.active);
                 }
 
                 self.active = true;
@@ -126,7 +130,7 @@ module.exports = (function(){
             var self = this;
             if (self.active && self.accepted == drg) {
                 if (self.cls.over) {
-                    addClass(self.node, self.cls.over);
+                    addClass(self.droppable, self.cls.over);
                 }
             }
         },
@@ -135,7 +139,7 @@ module.exports = (function(){
             var self = this;
             if (self.active && self.accepted == drg) {
                 if (self.cls.over) {
-                    removeClass(self.node, self.cls.over);
+                    removeClass(self.droppable, self.cls.over);
                 }
             }
         },
@@ -143,7 +147,7 @@ module.exports = (function(){
         getCoords: function() {
 
             var self = this,
-                el	= self.node,
+                el	= self.droppable,
                 ofs	= getOffset(el),
                 coords = {};
 
@@ -174,10 +178,10 @@ module.exports = (function(){
             self.accepted = null;
 
             if (self.cls.active) {
-                removeClass(self.node, self.cls.active);
+                removeClass(self.droppable, self.cls.active);
             }
             if (self.cls.over) {
-                removeClass(self.node, self.cls.over);
+                removeClass(self.droppable, self.cls.over);
             }
 
             self.trigger('deactivate', self);

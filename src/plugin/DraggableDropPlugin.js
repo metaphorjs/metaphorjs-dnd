@@ -25,13 +25,20 @@ module.exports = defineClass({
     },
 
     onStart: function(drg, e) {
+        this.initDroppables(e);
+    },
+
+    initDroppables: function(e) {
 
         var self    = this,
+            drg     = self.drg,
             to		= drg.drop,
             drps	= isFunction(to) ?
-                            to.call(drg.$$callbackContext, drg) :
-                            Droppable.getAll(),
+                        to.call(drg.$$callbackContext, drg) :
+                        Droppable.getAll(),
             i, l;
+
+        e = e || drg.lastMoveEvent || drg.startEvent;
 
         for (i = 0, l = drps.length; i < l; i++) {
 

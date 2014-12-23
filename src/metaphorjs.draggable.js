@@ -370,7 +370,7 @@ module.exports = function () {
             }
         },
 
-        onActualStart: function (e) {
+        onActualStart: function(e) {
 
             var self = this,
                 se = self.startEvent;
