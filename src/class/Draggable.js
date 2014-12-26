@@ -17,9 +17,9 @@ var extend = require("metaphorjs/src/func/extend.js"),
     getStyle = require("metaphorjs/src/func/dom/getStyle.js"),
     getAnimationPrefixes = require("metaphorjs-animate/src/func/getAnimationPrefixes.js"),
     async = require("metaphorjs/src/func/async.js"),
-    animate = require("metaphorjs-animate/src/metaphorjs.animate.js"),
+    animate = require("metaphorjs-animate/src/func/animate.js"),
     browserHasEvent = require("metaphorjs/src/func/browser/browserHasEvent.js"),
-    select = require("metaphorjs-select/src/metaphorjs.select.js");
+    select = require("metaphorjs-select/src/func/select.js");
 
 module.exports = function () {
 
@@ -166,19 +166,19 @@ module.exports = function () {
             var self = this;
 
             if (cfg.helper.tpl || cfg.helper.fn) {
-                self.$plugins.push("$draggable.Helper");
+                self.$plugins.push("draggable.Helper");
             }
 
             if (cfg.placeholder.tpl || cfg.placeholder.fn) {
-                self.$plugins.push("$draggable.Placeholder");
+                self.$plugins.push("draggable.Placeholder");
             }
 
             if (cfg.boundary) {
-                self.$plugins.push("$draggable.Boundary");
+                self.$plugins.push("draggable.Boundary");
             }
 
             if (cfg.drop) {
-                self.$plugins.push("$draggable.Drop");
+                self.$plugins.push("draggable.Drop");
             }
 
             self.$super(cfg);
@@ -658,7 +658,7 @@ module.exports = function () {
         destroy: function () {
 
             this.disable();
-            this.draggable.$draggable = null;
+            this.draggable.$$draggable = null;
         }
 
 

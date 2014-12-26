@@ -1,11 +1,11 @@
 
 var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
-    Droppable = require("../metaphorjs.droppable.js");
+    Droppable = require("../class/Droppable.js");
 
 
 module.exports = defineClass({
 
-    $class: "$draggable.Drop",
+    $class: "draggable.Drop",
     drg: null,
     droppables: null,
 

@@ -15,18 +15,6 @@
       "files": [
         "metaphorjs/src/MetaphorJs.js",
         [
-          "src/metaphorjs.draggable.js",
-          {
-            "as": "Draggable"
-          }
-        ],
-        [
-          "src/metaphorjs.droppable.js",
-          {
-            "as": "Droppable"
-          }
-        ],
-        [
           "src/**",
           {
             "as": "*"

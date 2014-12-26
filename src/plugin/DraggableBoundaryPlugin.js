@@ -7,13 +7,13 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
     getOuterWidth = require("metaphorjs/src/func/dom/getOuterWidth.js"),
     getOuterHeight = require("metaphorjs/src/func/dom/getOuterHeight.js"),
     getStyle = require("metaphorjs/src/func/dom/getStyle.js"),
-    select = require("metaphorjs-select/src/metaphorjs.select.js"),
+    select = require("metaphorjs-select/src/func/select.js"),
     isArray = require("metaphorjs/src/func/isArray.js"),
     undf = require("metaphorjs/src/var/undf.js");
 
 module.exports = defineClass({
 
-    $class: "$draggable.Boundary",
+    $class: "draggable.Boundary",
     drg: null,
     bndEl: null,
     bnd: null,

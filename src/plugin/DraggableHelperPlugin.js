@@ -1,11 +1,11 @@
 
 var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
     toFragment = require("metaphorjs/src/func/dom/toFragment.js"),
-    animate = require("metaphorjs-animate/src/metaphorjs.animate.js");
+    animate = require("metaphorjs-animate/src/func/animate.js");
 
 
 module.exports = defineClass({
-    $class: "$draggable.Helper",
+    $class: "draggable.Helper",
 
     drg: null,
     helperEl: null,
