@@ -1154,7 +1154,7 @@ var Class = function(){
                 for (i = 0, l = mixins.length; i < l; i++) {
                     mixin = mixins[i];
                     if (isString(mixin)) {
-                        mixin = ns.get("mixin." + mixin, true);
+                        mixin = ns.get(mixin, true);
                     }
                     mixinToPrototype(prototype, mixin);
                 }
@@ -1344,876 +1344,6 @@ var cs = new Class(ns);
 
 
 var defineClass = cs.define;
-
-
-var nextUid = function(){
-    var uid = ['0', '0', '0'];
-
-    // from AngularJs
-    /**
-     * @returns {String}
-     */
-    return function nextUid() {
-        var index = uid.length;
-        var digit;
-
-        while(index) {
-            index--;
-            digit = uid[index].charCodeAt(0);
-            if (digit == 57 /*'9'*/) {
-                uid[index] = 'A';
-                return uid.join('');
-            }
-            if (digit == 90  /*'Z'*/) {
-                uid[index] = '0';
-            } else {
-                uid[index] = String.fromCharCode(digit + 1);
-                return uid.join('');
-            }
-        }
-        uid.unshift('0');
-        return uid.join('');
-    };
-}();
-
-
-
-
-
-var ObservableEvent = (function(){
-
-    /**
-     * This class is private - you can't create an event other than via Observable.
-     * See Observable reference.
-     * @class ObservableEvent
-     * @private
-     */
-    var ObservableEvent = function(name, returnResult, autoTrigger, triggerFilter, filterContext) {
-
-        var self    = this;
-
-        self.name           = name;
-        self.listeners      = [];
-        self.map            = {};
-        self.hash           = nextUid();
-        self.uni            = '$$' + name + '_' + self.hash;
-        self.suspended      = false;
-        self.lid            = 0;
-
-        if (typeof returnResult == "object" && returnResult !== null) {
-            extend(self, returnResult, true, false);
-        }
-        else {
-            self.returnResult = returnResult === undf ? null : returnResult; // first|last|all
-            self.autoTrigger = autoTrigger;
-            self.triggerFilter = triggerFilter;
-            self.filterContext = filterContext;
-        }
-    };
-
-
-    extend(ObservableEvent.prototype, {
-
-        name: null,
-        listeners: null,
-        map: null,
-        hash: null,
-        uni: null,
-        suspended: false,
-        lid: null,
-        returnResult: null,
-        autoTrigger: null,
-        lastTrigger: null,
-        triggerFilter: null,
-        filterContext: null,
-
-        /**
-         * Get event name
-         * @method
-         * @returns {string}
-         */
-        getName: function() {
-            return this.name;
-        },
-
-        /**
-         * @method
-         */
-        destroy: function() {
-            var self        = this,
-                k;
-
-            for (k in self) {
-                self[k] = null;
-            }
-        },
-
-        /**
-         * @method
-         * @param {function} fn Callback function { @required }
-         * @param {object} context Function's "this" object
-         * @param {object} options See Observable's on()
-         */
-        on: function(fn, context, options) {
-
-            if (!fn) {
-                return null;
-            }
-
-            context     = context || null;
-            options     = options || {};
-
-            var self        = this,
-                uni         = self.uni,
-                uniContext  = context || fn;
-
-            if (uniContext[uni] && !options.allowDupes) {
-                return null;
-            }
-
-            var id      = ++self.lid,
-                first   = options.first || false;
-
-            uniContext[uni]  = id;
-
-
-            var e = {
-                fn:         fn,
-                context:    context,
-                uniContext: uniContext,
-                id:         id,
-                called:     0, // how many times the function was triggered
-                limit:      0, // how many times the function is allowed to trigger
-                start:      1, // from which attempt it is allowed to trigger the function
-                count:      0, // how many attempts to trigger the function was made
-                append:     null, // append parameters
-                prepend:    null // prepend parameters
-            };
-
-            extend(e, options, true, false);
-
-            if (first) {
-                self.listeners.unshift(e);
-            }
-            else {
-                self.listeners.push(e);
-            }
-
-            self.map[id] = e;
-
-            if (self.autoTrigger && self.lastTrigger && !self.suspended) {
-                var prevFilter = self.triggerFilter;
-                self.triggerFilter = function(l){
-                    if (l.id == id) {
-                        return prevFilter ? prevFilter(l) !== false : true;
-                    }
-                    return false;
-                };
-                self.trigger.apply(self, self.lastTrigger);
-                self.triggerFilter = prevFilter;
-            }
-
-            return id;
-        },
-
-        /**
-         * @method
-         * @param {function} fn Callback function { @required }
-         * @param {object} context Function's "this" object
-         * @param {object} options See Observable's on()
-         */
-        once: function(fn, context, options) {
-
-            options = options || {};
-            options.limit = 1;
-
-            return this.on(fn, context, options);
-        },
-
-        /**
-         * @method
-         * @param {function} fn Callback function { @required }
-         * @param {object} context Function's "this" object
-         */
-        un: function(fn, context) {
-
-            var self        = this,
-                inx         = -1,
-                uni         = self.uni,
-                listeners   = self.listeners,
-                id;
-
-            if (fn == parseInt(fn)) {
-                id      = fn;
-            }
-            else {
-                context = context || fn;
-                id      = context[uni];
-            }
-
-            if (!id) {
-                return false;
-            }
-
-            for (var i = 0, len = listeners.length; i < len; i++) {
-                if (listeners[i].id == id) {
-                    inx = i;
-                    delete listeners[i].uniContext[uni];
-                    break;
-                }
-            }
-
-            if (inx == -1) {
-                return false;
-            }
-
-            listeners.splice(inx, 1);
-            delete self.map[id];
-            return true;
-        },
-
-        /**
-         * @method hasListener
-         * @return bool
-         */
-
-        /**
-         * @method
-         * @param {function} fn Callback function { @required }
-         * @param {object} context Function's "this" object
-         * @return bool
-         */
-        hasListener: function(fn, context) {
-
-            var self    = this,
-                listeners   = self.listeners,
-                id;
-
-            if (fn) {
-
-                context = context || fn;
-
-                if (!isFunction(fn)) {
-                    id  = fn;
-                }
-                else {
-                    id  = context[self.uni];
-                }
-
-                if (!id) {
-                    return false;
-                }
-
-                for (var i = 0, len = listeners.length; i < len; i++) {
-                    if (listeners[i].id == id) {
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-            else {
-                return listeners.length > 0;
-            }
-        },
-
-
-        /**
-         * @method
-         */
-        removeAllListeners: function() {
-            var self    = this,
-                listeners = self.listeners,
-                uni     = self.uni,
-                i, len;
-
-            for (i = 0, len = listeners.length; i < len; i++) {
-                delete listeners[i].uniContext[uni];
-            }
-            self.listeners   = [];
-            self.map         = {};
-        },
-
-        /**
-         * @method
-         */
-        suspend: function() {
-            this.suspended = true;
-        },
-
-        /**
-         * @method
-         */
-        resume: function() {
-            this.suspended = false;
-        },
-
-
-        _prepareArgs: function(l, triggerArgs) {
-            var args;
-
-            if (l.append || l.prepend) {
-                args    = slice.call(triggerArgs);
-                if (l.prepend) {
-                    args    = l.prepend.concat(args);
-                }
-                if (l.append) {
-                    args    = args.concat(l.append);
-                }
-            }
-            else {
-                args = triggerArgs;
-            }
-
-            return args;
-        },
-
-        /**
-         * @method
-         * @return {*}
-         */
-        trigger: function() {
-
-            var self            = this,
-                listeners       = self.listeners,
-                returnResult    = self.returnResult,
-                filter          = self.triggerFilter,
-                filterContext   = self.filterContext,
-                args;
-
-            if (self.suspended) {
-                return null;
-            }
-
-            if (self.autoTrigger) {
-                self.lastTrigger = slice.call(arguments);
-            }
-
-            if (listeners.length == 0) {
-                return null;
-            }
-
-            var ret     = returnResult == "all" || returnResult == "merge" ?
-                          [] : null,
-                q, l,
-                res;
-
-            if (returnResult == "first") {
-                q = [listeners[0]];
-            }
-            else {
-                // create a snapshot of listeners list
-                q = slice.call(listeners);
-            }
-
-            // now if during triggering someone unsubscribes
-            // we won't skip any listener due to shifted
-            // index
-            while (l = q.shift()) {
-
-                // listener may already have unsubscribed
-                if (!l || !self.map[l.id]) {
-                    continue;
-                }
-
-                args = self._prepareArgs(l, arguments);
-
-                if (filter && filter.call(filterContext, l, args, self) === false) {
-                    continue;
-                }
-
-                l.count++;
-
-                if (l.count < l.start) {
-                    continue;
-                }
-
-                res = l.fn.apply(l.context, args);
-
-                l.called++;
-
-                if (l.called == l.limit) {
-                    self.un(l.id);
-                }
-
-                if (returnResult == "all") {
-                    ret.push(res);
-                }
-                else if (returnResult == "merge" && res) {
-                    ret = ret.concat(res);
-                }
-                else if (returnResult == "first") {
-                    return res;
-                }
-                else if (returnResult == "nonempty" && res) {
-                    return res;
-                }
-                else if (returnResult == "last") {
-                    ret = res;
-                }
-                else if (returnResult == false && res === false) {
-                    return false;
-                }
-            }
-
-            if (returnResult) {
-                return ret;
-            }
-        }
-    }, true, false);
-
-
-    return ObservableEvent;
-}());
-
-
-
-
-var Observable = (function(){
-
-
-    /**
-     * @description A javascript event system implementing two patterns - observable and collector.
-     * @description Observable:
-     * @code examples/observable.js
-     *
-     * @description Collector:
-     * @code examples/collector.js
-     *
-     * @class Observable
-     * @version 1.1
-     * @author johann kuindji
-     * @link https://github.com/kuindji/metaphorjs-observable
-     */
-    var Observable = function() {
-
-        this.events = {};
-
-    };
-
-
-    extend(Observable.prototype, {
-
-
-
-        /**
-        * You don't have to call this function unless you want to pass params other than event name.
-        * Normally, events are created automatically.
-        *
-        * @method createEvent
-        * @access public
-        * @param {string} name {
-        *       Event name
-        *       @required
-        * }
-        * @param {bool|string} returnResult {
-        *   false -- return first 'false' result and stop calling listeners after that<br>
-        *   "all" -- return all results as array<br>
-        *   "merge" -- merge all results into one array (each result must be array)<br>
-        *   "first" -- return result of the first handler (next listener will not be called)<br>
-        *   "last" -- return result of the last handler (all listeners will be called)<br>
-        * }
-        * @param {bool} autoTrigger {
-        *   once triggered, all future subscribers will be automatically called
-        *   with last trigger params
-        *   @code examples/autoTrigger.js
-        * }
-        * @param {function} triggerFilter {
-        *   This function will be called each time event is triggered. Return false to skip listener.
-        *   @code examples/triggerFilter.js
-        *   @param {object} listener This object contains all information about the listener, including
-        *       all data you provided in options while subscribing to the event.
-        *   @param {[]} arguments
-        *   @return {bool}
-        * }
-        * @return {ObservableEvent}
-        */
-
-        /**
-         * @method createEvent
-         * @param {string} name
-         * @param {object} options {
-         *  @type {string} returnResult
-         *  @param {bool} autoTrigger
-         *  @param {function} triggerFilter
-         * }
-         * @param {object} filterContext
-         * @returns {ObservableEvent}
-         */
-        createEvent: function(name, returnResult, autoTrigger, triggerFilter, filterContext) {
-            name = name.toLowerCase();
-            var events  = this.events;
-            if (!events[name]) {
-                events[name] = new ObservableEvent(name, returnResult, autoTrigger, triggerFilter, filterContext);
-            }
-            return events[name];
-        },
-
-        /**
-        * @method
-        * @access public
-        * @param {string} name Event name
-        * @return {ObservableEvent|undefined}
-        */
-        getEvent: function(name) {
-            name = name.toLowerCase();
-            return this.events[name];
-        },
-
-        /**
-        * Subscribe to an event or register collector function.
-        * @method
-        * @access public
-        * @param {string} name {
-        *       Event name
-        *       @required
-        * }
-        * @param {function} fn {
-        *       Callback function
-        *       @required
-        * }
-        * @param {object} context "this" object for the callback function
-        * @param {object} options {
-        *       You can pass any key-value pairs in this object. All of them will be passed to triggerFilter (if
-        *       you're using one).
-        *       @type {bool} first {
-        *           True to prepend to the list of handlers
-        *           @default false
-        *       }
-        *       @type {number} limit {
-        *           Call handler this number of times; 0 for unlimited
-        *           @default 0
-        *       }
-        *       @type {number} start {
-        *           Start calling handler after this number of calls. Starts from 1
-        *           @default 1
-        *       }
-         *      @type {[]} append Append parameters
-         *      @type {[]} prepend Prepend parameters
-         *      @type {bool} allowDupes allow the same handler twice
-        * }
-        */
-        on: function(name, fn, context, options) {
-            name = name.toLowerCase();
-            var events  = this.events;
-            if (!events[name]) {
-                events[name] = new ObservableEvent(name);
-            }
-            return events[name].on(fn, context, options);
-        },
-
-        /**
-        * Same as {@link Observable.on}, but options.limit is forcefully set to 1.
-        * @method
-        * @access public
-        */
-        once: function(name, fn, context, options) {
-            options     = options || {};
-            options.limit = 1;
-            return this.on(name, fn, context, options);
-        },
-
-
-        /**
-        * Unsubscribe from an event
-        * @method
-        * @access public
-        * @param {string} name Event name
-        * @param {function} fn Event handler
-        * @param {object} context If you called on() with context you must call un() with the same context
-        */
-        un: function(name, fn, context) {
-            name = name.toLowerCase();
-            var events  = this.events;
-            if (!events[name]) {
-                return;
-            }
-            events[name].un(fn, context);
-        },
-
-        /**
-         * @method hasListener
-         * @access public
-         * @return bool
-         */
-
-        /**
-        * @method hasListener
-        * @access public
-        * @param {string} name Event name { @required }
-        * @return bool
-        */
-
-        /**
-        * @method
-        * @access public
-        * @param {string} name Event name { @required }
-        * @param {function} fn Callback function { @required }
-        * @param {object} context Function's "this" object
-        * @return bool
-        */
-        hasListener: function(name, fn, context) {
-            var events = this.events;
-
-            if (name) {
-                name = name.toLowerCase();
-                if (!events[name]) {
-                    return false;
-                }
-                return events[name].hasListener(fn, context);
-            }
-            else {
-                for (name in events) {
-                    if (events[name].hasListener()) {
-                        return true;
-                    }
-                }
-                return false;
-            }
-        },
-
-
-        /**
-        * Remove all listeners from all events
-        * @method removeAllListeners
-        * @access public
-        */
-
-        /**
-        * Remove all listeners from specific event
-        * @method
-        * @access public
-        * @param {string} name Event name { @required }
-        */
-        removeAllListeners: function(name) {
-            var events  = this.events;
-            if (!events[name]) {
-                return;
-            }
-            events[name].removeAllListeners();
-        },
-
-        /**
-        * Trigger an event -- call all listeners.
-        * @method
-        * @access public
-        * @param {string} name Event name { @required }
-        * @param {*} ... As many other params as needed
-        * @return mixed
-        */
-        trigger: function() {
-
-            var name = arguments[0],
-                events  = this.events;
-
-            name = name.toLowerCase();
-
-            if (!events[name]) {
-                return null;
-            }
-
-            var e = events[name];
-            return e.trigger.apply(e, slice.call(arguments, 1));
-        },
-
-        /**
-        * Suspend an event. Suspended event will not call any listeners on trigger().
-        * @method
-        * @access public
-        * @param {string} name Event name
-        */
-        suspendEvent: function(name) {
-            name = name.toLowerCase();
-            var events  = this.events;
-            if (!events[name]) {
-                return;
-            }
-            events[name].suspend();
-        },
-
-        /**
-        * @method
-        * @access public
-        */
-        suspendAllEvents: function() {
-            var events  = this.events;
-            for (var name in events) {
-                events[name].suspend();
-            }
-        },
-
-        /**
-        * Resume suspended event.
-        * @method
-        * @access public
-        * @param {string} name Event name
-        */
-        resumeEvent: function(name) {
-            name = name.toLowerCase();
-            var events  = this.events;
-            if (!events[name]) {
-                return;
-            }
-            events[name].resume();
-        },
-
-        /**
-        * @method
-        * @access public
-        */
-        resumeAllEvents: function() {
-            var events  = this.events;
-            for (var name in events) {
-                events[name].resume();
-            }
-        },
-
-        /**
-         * @method
-         * @access public
-         * @param {string} name Event name
-         */
-        destroyEvent: function(name) {
-            var events  = this.events;
-            if (events[name]) {
-                events[name].removeAllListeners();
-                events[name].destroy();
-                delete events[name];
-            }
-        },
-
-
-        /**
-        * Destroy observable
-        * @method
-        * @md-not-inheritable
-        * @access public
-        */
-        destroy: function() {
-            var self    = this,
-                events  = self.events;
-
-            for (var i in events) {
-                self.destroyEvent(i);
-            }
-
-            for (i in self) {
-                self[i] = null;
-            }
-        },
-
-        /**
-        * Although all methods are public there is getApi() method that allows you
-        * extending your own objects without overriding "destroy" (which you probably have)
-        * @code examples/api.js
-        * @method
-        * @md-not-inheritable
-        * @returns object
-        */
-        getApi: function() {
-
-            var self    = this;
-
-            if (!self.api) {
-
-                var methods = [
-                        "createEvent", "getEvent", "on", "un", "once", "hasListener", "removeAllListeners",
-                        "trigger", "suspendEvent", "suspendAllEvents", "resumeEvent",
-                        "resumeAllEvents", "destroyEvent"
-                    ],
-                    api = {},
-                    name;
-
-                for(var i =- 1, l = methods.length;
-                        ++i < l;
-                        name = methods[i],
-                        api[name] = bind(self[name], self)){}
-
-                self.api = api;
-            }
-
-            return self.api;
-
-        }
-    }, true, false);
-
-
-    return Observable;
-}());
-
-
-
-/**
- * @mixin ObservableMixin
- */
-var ObservableMixin = ns.add("mixin.Observable", {
-
-    /**
-     * @type {Observable}
-     */
-    $$observable: null,
-    $$callbackContext: null,
-
-    $beforeInit: function(cfg) {
-
-        var self = this;
-
-        self.$$observable = new Observable;
-
-        if (cfg && cfg.callback) {
-            var ls = cfg.callback,
-                context = ls.context || ls.scope,
-                i;
-
-            ls.context = null;
-            ls.scope = null;
-
-            for (i in ls) {
-                if (ls[i]) {
-                    self.$$observable.on(i, ls[i], context || self);
-                }
-            }
-
-            cfg.callback = null;
-
-            if (context) {
-                self.$$callbackContext = context;
-            }
-        }
-    },
-
-    on: function() {
-        var o = this.$$observable;
-        return o.on.apply(o, arguments);
-    },
-
-    un: function() {
-        var o = this.$$observable;
-        return o.un.apply(o, arguments);
-    },
-
-    once: function() {
-        var o = this.$$observable;
-        return o.once.apply(o, arguments);
-    },
-
-    trigger: function() {
-        var o = this.$$observable;
-        return o.trigger.apply(o, arguments);
-    },
-
-    $beforeDestroy: function() {
-        this.$$observable.trigger("before-destroy", this);
-    },
-
-    $afterDestroy: function() {
-        var self = this;
-        self.$$observable.trigger("destroy", self);
-        self.$$observable.destroy();
-        self.$$observable = null;
-    }
-});
-
 
 function returnFalse() {
     return false;
@@ -3124,6 +2254,38 @@ var getAnimationDuration = function(){
 
 }();
 
+
+
+
+var nextUid = function(){
+    var uid = ['0', '0', '0'];
+
+    // from AngularJs
+    /**
+     * @returns {String}
+     */
+    return function nextUid() {
+        var index = uid.length;
+        var digit;
+
+        while(index) {
+            index--;
+            digit = uid[index].charCodeAt(0);
+            if (digit == 57 /*'9'*/) {
+                uid[index] = 'A';
+                return uid.join('');
+            }
+            if (digit == 90  /*'Z'*/) {
+                uid[index] = '0';
+            } else {
+                uid[index] = String.fromCharCode(digit + 1);
+                return uid.join('');
+            }
+        }
+        uid.unshift('0');
+        return uid.join('');
+    };
+}();
 
 
 
@@ -5024,6 +4186,846 @@ var select = function() {
 
 
 
+
+var ObservableEvent = (function(){
+
+    /**
+     * This class is private - you can't create an event other than via Observable.
+     * See Observable reference.
+     * @class ObservableEvent
+     * @private
+     */
+    var ObservableEvent = function(name, returnResult, autoTrigger, triggerFilter, filterContext) {
+
+        var self    = this;
+
+        self.name           = name;
+        self.listeners      = [];
+        self.map            = {};
+        self.hash           = nextUid();
+        self.uni            = '$$' + name + '_' + self.hash;
+        self.suspended      = false;
+        self.lid            = 0;
+
+        if (typeof returnResult == "object" && returnResult !== null) {
+            extend(self, returnResult, true, false);
+        }
+        else {
+            self.returnResult = returnResult === undf ? null : returnResult; // first|last|all
+            self.autoTrigger = autoTrigger;
+            self.triggerFilter = triggerFilter;
+            self.filterContext = filterContext;
+        }
+    };
+
+
+    extend(ObservableEvent.prototype, {
+
+        name: null,
+        listeners: null,
+        map: null,
+        hash: null,
+        uni: null,
+        suspended: false,
+        lid: null,
+        returnResult: null,
+        autoTrigger: null,
+        lastTrigger: null,
+        triggerFilter: null,
+        filterContext: null,
+
+        /**
+         * Get event name
+         * @method
+         * @returns {string}
+         */
+        getName: function() {
+            return this.name;
+        },
+
+        /**
+         * @method
+         */
+        destroy: function() {
+            var self        = this,
+                k;
+
+            for (k in self) {
+                self[k] = null;
+            }
+        },
+
+        /**
+         * @method
+         * @param {function} fn Callback function { @required }
+         * @param {object} context Function's "this" object
+         * @param {object} options See Observable's on()
+         */
+        on: function(fn, context, options) {
+
+            if (!fn) {
+                return null;
+            }
+
+            context     = context || null;
+            options     = options || {};
+
+            var self        = this,
+                uni         = self.uni,
+                uniContext  = context || fn;
+
+            if (uniContext[uni] && !options.allowDupes) {
+                return null;
+            }
+
+            var id      = ++self.lid,
+                first   = options.first || false;
+
+            uniContext[uni]  = id;
+
+
+            var e = {
+                fn:         fn,
+                context:    context,
+                uniContext: uniContext,
+                id:         id,
+                called:     0, // how many times the function was triggered
+                limit:      0, // how many times the function is allowed to trigger
+                start:      1, // from which attempt it is allowed to trigger the function
+                count:      0, // how many attempts to trigger the function was made
+                append:     null, // append parameters
+                prepend:    null // prepend parameters
+            };
+
+            extend(e, options, true, false);
+
+            if (first) {
+                self.listeners.unshift(e);
+            }
+            else {
+                self.listeners.push(e);
+            }
+
+            self.map[id] = e;
+
+            if (self.autoTrigger && self.lastTrigger && !self.suspended) {
+                var prevFilter = self.triggerFilter;
+                self.triggerFilter = function(l){
+                    if (l.id == id) {
+                        return prevFilter ? prevFilter(l) !== false : true;
+                    }
+                    return false;
+                };
+                self.trigger.apply(self, self.lastTrigger);
+                self.triggerFilter = prevFilter;
+            }
+
+            return id;
+        },
+
+        /**
+         * @method
+         * @param {function} fn Callback function { @required }
+         * @param {object} context Function's "this" object
+         * @param {object} options See Observable's on()
+         */
+        once: function(fn, context, options) {
+
+            options = options || {};
+            options.limit = 1;
+
+            return this.on(fn, context, options);
+        },
+
+        /**
+         * @method
+         * @param {function} fn Callback function { @required }
+         * @param {object} context Function's "this" object
+         */
+        un: function(fn, context) {
+
+            var self        = this,
+                inx         = -1,
+                uni         = self.uni,
+                listeners   = self.listeners,
+                id;
+
+            if (fn == parseInt(fn)) {
+                id      = fn;
+            }
+            else {
+                context = context || fn;
+                id      = context[uni];
+            }
+
+            if (!id) {
+                return false;
+            }
+
+            for (var i = 0, len = listeners.length; i < len; i++) {
+                if (listeners[i].id == id) {
+                    inx = i;
+                    delete listeners[i].uniContext[uni];
+                    break;
+                }
+            }
+
+            if (inx == -1) {
+                return false;
+            }
+
+            listeners.splice(inx, 1);
+            delete self.map[id];
+            return true;
+        },
+
+        /**
+         * @method hasListener
+         * @return bool
+         */
+
+        /**
+         * @method
+         * @param {function} fn Callback function { @required }
+         * @param {object} context Function's "this" object
+         * @return bool
+         */
+        hasListener: function(fn, context) {
+
+            var self    = this,
+                listeners   = self.listeners,
+                id;
+
+            if (fn) {
+
+                context = context || fn;
+
+                if (!isFunction(fn)) {
+                    id  = fn;
+                }
+                else {
+                    id  = context[self.uni];
+                }
+
+                if (!id) {
+                    return false;
+                }
+
+                for (var i = 0, len = listeners.length; i < len; i++) {
+                    if (listeners[i].id == id) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+            else {
+                return listeners.length > 0;
+            }
+        },
+
+
+        /**
+         * @method
+         */
+        removeAllListeners: function() {
+            var self    = this,
+                listeners = self.listeners,
+                uni     = self.uni,
+                i, len;
+
+            for (i = 0, len = listeners.length; i < len; i++) {
+                delete listeners[i].uniContext[uni];
+            }
+            self.listeners   = [];
+            self.map         = {};
+        },
+
+        /**
+         * @method
+         */
+        suspend: function() {
+            this.suspended = true;
+        },
+
+        /**
+         * @method
+         */
+        resume: function() {
+            this.suspended = false;
+        },
+
+
+        _prepareArgs: function(l, triggerArgs) {
+            var args;
+
+            if (l.append || l.prepend) {
+                args    = slice.call(triggerArgs);
+                if (l.prepend) {
+                    args    = l.prepend.concat(args);
+                }
+                if (l.append) {
+                    args    = args.concat(l.append);
+                }
+            }
+            else {
+                args = triggerArgs;
+            }
+
+            return args;
+        },
+
+        /**
+         * @method
+         * @return {*}
+         */
+        trigger: function() {
+
+            var self            = this,
+                listeners       = self.listeners,
+                returnResult    = self.returnResult,
+                filter          = self.triggerFilter,
+                filterContext   = self.filterContext,
+                args;
+
+            if (self.suspended) {
+                return null;
+            }
+
+            if (self.autoTrigger) {
+                self.lastTrigger = slice.call(arguments);
+            }
+
+            if (listeners.length == 0) {
+                return null;
+            }
+
+            var ret     = returnResult == "all" || returnResult == "merge" ?
+                          [] : null,
+                q, l,
+                res;
+
+            if (returnResult == "first") {
+                q = [listeners[0]];
+            }
+            else {
+                // create a snapshot of listeners list
+                q = slice.call(listeners);
+            }
+
+            // now if during triggering someone unsubscribes
+            // we won't skip any listener due to shifted
+            // index
+            while (l = q.shift()) {
+
+                // listener may already have unsubscribed
+                if (!l || !self.map[l.id]) {
+                    continue;
+                }
+
+                args = self._prepareArgs(l, arguments);
+
+                if (filter && filter.call(filterContext, l, args, self) === false) {
+                    continue;
+                }
+
+                l.count++;
+
+                if (l.count < l.start) {
+                    continue;
+                }
+
+                res = l.fn.apply(l.context, args);
+
+                l.called++;
+
+                if (l.called == l.limit) {
+                    self.un(l.id);
+                }
+
+                if (returnResult == "all") {
+                    ret.push(res);
+                }
+                else if (returnResult == "merge" && res) {
+                    ret = ret.concat(res);
+                }
+                else if (returnResult == "first") {
+                    return res;
+                }
+                else if (returnResult == "nonempty" && res) {
+                    return res;
+                }
+                else if (returnResult == "last") {
+                    ret = res;
+                }
+                else if (returnResult == false && res === false) {
+                    return false;
+                }
+            }
+
+            if (returnResult) {
+                return ret;
+            }
+        }
+    }, true, false);
+
+
+    return ObservableEvent;
+}());
+
+
+
+
+var Observable = (function(){
+
+
+    /**
+     * @description A javascript event system implementing two patterns - observable and collector.
+     * @description Observable:
+     * @code examples/observable.js
+     *
+     * @description Collector:
+     * @code examples/collector.js
+     *
+     * @class Observable
+     * @version 1.1
+     * @author johann kuindji
+     * @link https://github.com/kuindji/metaphorjs-observable
+     */
+    var Observable = function() {
+
+        this.events = {};
+
+    };
+
+
+    extend(Observable.prototype, {
+
+
+
+        /**
+        * You don't have to call this function unless you want to pass params other than event name.
+        * Normally, events are created automatically.
+        *
+        * @method createEvent
+        * @access public
+        * @param {string} name {
+        *       Event name
+        *       @required
+        * }
+        * @param {bool|string} returnResult {
+        *   false -- return first 'false' result and stop calling listeners after that<br>
+        *   "all" -- return all results as array<br>
+        *   "merge" -- merge all results into one array (each result must be array)<br>
+        *   "first" -- return result of the first handler (next listener will not be called)<br>
+        *   "last" -- return result of the last handler (all listeners will be called)<br>
+        * }
+        * @param {bool} autoTrigger {
+        *   once triggered, all future subscribers will be automatically called
+        *   with last trigger params
+        *   @code examples/autoTrigger.js
+        * }
+        * @param {function} triggerFilter {
+        *   This function will be called each time event is triggered. Return false to skip listener.
+        *   @code examples/triggerFilter.js
+        *   @param {object} listener This object contains all information about the listener, including
+        *       all data you provided in options while subscribing to the event.
+        *   @param {[]} arguments
+        *   @return {bool}
+        * }
+        * @return {ObservableEvent}
+        */
+
+        /**
+         * @method createEvent
+         * @param {string} name
+         * @param {object} options {
+         *  @type {string} returnResult
+         *  @param {bool} autoTrigger
+         *  @param {function} triggerFilter
+         * }
+         * @param {object} filterContext
+         * @returns {ObservableEvent}
+         */
+        createEvent: function(name, returnResult, autoTrigger, triggerFilter, filterContext) {
+            name = name.toLowerCase();
+            var events  = this.events;
+            if (!events[name]) {
+                events[name] = new ObservableEvent(name, returnResult, autoTrigger, triggerFilter, filterContext);
+            }
+            return events[name];
+        },
+
+        /**
+        * @method
+        * @access public
+        * @param {string} name Event name
+        * @return {ObservableEvent|undefined}
+        */
+        getEvent: function(name) {
+            name = name.toLowerCase();
+            return this.events[name];
+        },
+
+        /**
+        * Subscribe to an event or register collector function.
+        * @method
+        * @access public
+        * @param {string} name {
+        *       Event name
+        *       @required
+        * }
+        * @param {function} fn {
+        *       Callback function
+        *       @required
+        * }
+        * @param {object} context "this" object for the callback function
+        * @param {object} options {
+        *       You can pass any key-value pairs in this object. All of them will be passed to triggerFilter (if
+        *       you're using one).
+        *       @type {bool} first {
+        *           True to prepend to the list of handlers
+        *           @default false
+        *       }
+        *       @type {number} limit {
+        *           Call handler this number of times; 0 for unlimited
+        *           @default 0
+        *       }
+        *       @type {number} start {
+        *           Start calling handler after this number of calls. Starts from 1
+        *           @default 1
+        *       }
+         *      @type {[]} append Append parameters
+         *      @type {[]} prepend Prepend parameters
+         *      @type {bool} allowDupes allow the same handler twice
+        * }
+        */
+        on: function(name, fn, context, options) {
+            name = name.toLowerCase();
+            var events  = this.events;
+            if (!events[name]) {
+                events[name] = new ObservableEvent(name);
+            }
+            return events[name].on(fn, context, options);
+        },
+
+        /**
+        * Same as {@link Observable.on}, but options.limit is forcefully set to 1.
+        * @method
+        * @access public
+        */
+        once: function(name, fn, context, options) {
+            options     = options || {};
+            options.limit = 1;
+            return this.on(name, fn, context, options);
+        },
+
+
+        /**
+        * Unsubscribe from an event
+        * @method
+        * @access public
+        * @param {string} name Event name
+        * @param {function} fn Event handler
+        * @param {object} context If you called on() with context you must call un() with the same context
+        */
+        un: function(name, fn, context) {
+            name = name.toLowerCase();
+            var events  = this.events;
+            if (!events[name]) {
+                return;
+            }
+            events[name].un(fn, context);
+        },
+
+        /**
+         * @method hasListener
+         * @access public
+         * @return bool
+         */
+
+        /**
+        * @method hasListener
+        * @access public
+        * @param {string} name Event name { @required }
+        * @return bool
+        */
+
+        /**
+        * @method
+        * @access public
+        * @param {string} name Event name { @required }
+        * @param {function} fn Callback function { @required }
+        * @param {object} context Function's "this" object
+        * @return bool
+        */
+        hasListener: function(name, fn, context) {
+            var events = this.events;
+
+            if (name) {
+                name = name.toLowerCase();
+                if (!events[name]) {
+                    return false;
+                }
+                return events[name].hasListener(fn, context);
+            }
+            else {
+                for (name in events) {
+                    if (events[name].hasListener()) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        },
+
+
+        /**
+        * Remove all listeners from all events
+        * @method removeAllListeners
+        * @access public
+        */
+
+        /**
+        * Remove all listeners from specific event
+        * @method
+        * @access public
+        * @param {string} name Event name { @required }
+        */
+        removeAllListeners: function(name) {
+            var events  = this.events;
+            if (!events[name]) {
+                return;
+            }
+            events[name].removeAllListeners();
+        },
+
+        /**
+        * Trigger an event -- call all listeners.
+        * @method
+        * @access public
+        * @param {string} name Event name { @required }
+        * @param {*} ... As many other params as needed
+        * @return mixed
+        */
+        trigger: function() {
+
+            var name = arguments[0],
+                events  = this.events;
+
+            name = name.toLowerCase();
+
+            if (!events[name]) {
+                return null;
+            }
+
+            var e = events[name];
+            return e.trigger.apply(e, slice.call(arguments, 1));
+        },
+
+        /**
+        * Suspend an event. Suspended event will not call any listeners on trigger().
+        * @method
+        * @access public
+        * @param {string} name Event name
+        */
+        suspendEvent: function(name) {
+            name = name.toLowerCase();
+            var events  = this.events;
+            if (!events[name]) {
+                return;
+            }
+            events[name].suspend();
+        },
+
+        /**
+        * @method
+        * @access public
+        */
+        suspendAllEvents: function() {
+            var events  = this.events;
+            for (var name in events) {
+                events[name].suspend();
+            }
+        },
+
+        /**
+        * Resume suspended event.
+        * @method
+        * @access public
+        * @param {string} name Event name
+        */
+        resumeEvent: function(name) {
+            name = name.toLowerCase();
+            var events  = this.events;
+            if (!events[name]) {
+                return;
+            }
+            events[name].resume();
+        },
+
+        /**
+        * @method
+        * @access public
+        */
+        resumeAllEvents: function() {
+            var events  = this.events;
+            for (var name in events) {
+                events[name].resume();
+            }
+        },
+
+        /**
+         * @method
+         * @access public
+         * @param {string} name Event name
+         */
+        destroyEvent: function(name) {
+            var events  = this.events;
+            if (events[name]) {
+                events[name].removeAllListeners();
+                events[name].destroy();
+                delete events[name];
+            }
+        },
+
+
+        /**
+        * Destroy observable
+        * @method
+        * @md-not-inheritable
+        * @access public
+        */
+        destroy: function() {
+            var self    = this,
+                events  = self.events;
+
+            for (var i in events) {
+                self.destroyEvent(i);
+            }
+
+            for (i in self) {
+                self[i] = null;
+            }
+        },
+
+        /**
+        * Although all methods are public there is getApi() method that allows you
+        * extending your own objects without overriding "destroy" (which you probably have)
+        * @code examples/api.js
+        * @method
+        * @md-not-inheritable
+        * @returns object
+        */
+        getApi: function() {
+
+            var self    = this;
+
+            if (!self.api) {
+
+                var methods = [
+                        "createEvent", "getEvent", "on", "un", "once", "hasListener", "removeAllListeners",
+                        "trigger", "suspendEvent", "suspendAllEvents", "resumeEvent",
+                        "resumeAllEvents", "destroyEvent"
+                    ],
+                    api = {},
+                    name;
+
+                for(var i =- 1, l = methods.length;
+                        ++i < l;
+                        name = methods[i],
+                        api[name] = bind(self[name], self)){}
+
+                self.api = api;
+            }
+
+            return self.api;
+
+        }
+    }, true, false);
+
+
+    return Observable;
+}());
+
+
+
+/**
+ * @mixin Observable
+ */
+ns.register("mixin.Observable", {
+
+    /**
+     * @type {Observable}
+     */
+    $$observable: null,
+    $$callbackContext: null,
+
+    $beforeInit: function(cfg) {
+
+        var self = this;
+
+        self.$$observable = new Observable;
+
+        if (cfg && cfg.callback) {
+            var ls = cfg.callback,
+                context = ls.context || ls.scope,
+                i;
+
+            ls.context = null;
+            ls.scope = null;
+
+            for (i in ls) {
+                if (ls[i]) {
+                    self.$$observable.on(i, ls[i], context || self);
+                }
+            }
+
+            cfg.callback = null;
+
+            if (context) {
+                self.$$callbackContext = context;
+            }
+        }
+    },
+
+    on: function() {
+        var o = this.$$observable;
+        return o.on.apply(o, arguments);
+    },
+
+    un: function() {
+        var o = this.$$observable;
+        return o.un.apply(o, arguments);
+    },
+
+    once: function() {
+        var o = this.$$observable;
+        return o.once.apply(o, arguments);
+    },
+
+    trigger: function() {
+        var o = this.$$observable;
+        return o.trigger.apply(o, arguments);
+    },
+
+    $beforeDestroy: function() {
+        this.$$observable.trigger("before-destroy", this);
+    },
+
+    $afterDestroy: function() {
+        var self = this;
+        self.$$observable.trigger("destroy", self);
+        self.$$observable.destroy();
+        self.$$observable = null;
+    }
+});
+
+
+
+
+
+
 var Draggable = function () {
 
     var prefixes = getAnimationPrefixes(),
@@ -5144,7 +5146,7 @@ var Draggable = function () {
     return defineClass({
 
         $class:  "Draggable",
-        $mixins: [ObservableMixin],
+        $mixins: ["mixin.Observable"],
 
         draggable: null,
 
@@ -5169,19 +5171,19 @@ var Draggable = function () {
             var self = this;
 
             if (cfg.helper.tpl || cfg.helper.fn) {
-                self.$plugins.push("draggable.Helper");
+                self.$plugins.push("draggable.plugin.Helper");
             }
 
             if (cfg.placeholder.tpl || cfg.placeholder.fn) {
-                self.$plugins.push("draggable.Placeholder");
+                self.$plugins.push("draggable.plugin.Placeholder");
             }
 
             if (cfg.boundary) {
-                self.$plugins.push("draggable.Boundary");
+                self.$plugins.push("draggable.plugin.Boundary");
             }
 
             if (cfg.drop) {
-                self.$plugins.push("draggable.Drop");
+                self.$plugins.push("draggable.plugin.Drop");
             }
 
             self.$super(cfg);
@@ -5682,6 +5684,8 @@ var is = select.is;
 
 
 
+
+
 var Droppable = (function(){
 
     var defaults = {
@@ -5700,7 +5704,7 @@ var Droppable = (function(){
     var Droppable = defineClass({
 
         $class:  "Draggable",
-        $mixins: [ObservableMixin],
+        $mixins: ["mixin.Observable"],
         droppable: null,
         enabled: true,
         active: false,
@@ -7497,9 +7501,9 @@ var getHeight = getDimensions("", "Height");
 
 
 
-var DraggableBoundaryPlugin = defineClass({
+defineClass({
 
-    $class: "draggable.Boundary",
+    $class: "draggable.plugin.Boundary",
     drg: null,
     bndEl: null,
     bnd: null,
@@ -7614,9 +7618,9 @@ var DraggableBoundaryPlugin = defineClass({
 
 
 
-var DraggableDropPlugin = defineClass({
+defineClass({
 
-    $class: "draggable.Drop",
+    $class: "draggable.plugin.Drop",
     drg: null,
     droppables: null,
 
@@ -7762,8 +7766,8 @@ function toFragment(nodes) {
 
 
 
-var DraggableHelperPlugin = defineClass({
-    $class: "draggable.Helper",
+defineClass({
+    $class: "draggable.plugin.Helper",
 
     drg: null,
     helperEl: null,
@@ -7883,9 +7887,9 @@ var removeStyle = (function() {
 
 
 
-var DraggablePlaceholderPlugin = defineClass({
+defineClass({
 
-    $class: "draggable.Placeholder",
+    $class: "draggable.plugin.Placeholder",
     drg: null,
     placeholderEl: null,
 
@@ -7951,7 +7955,7 @@ var DraggablePlaceholderPlugin = defineClass({
             cfg.appendTo.appendChild(pl);
         }
 
-        if (drg.$hasPlugin("draggable.Helper")) {
+        if (drg.$hasPlugin("draggable.plugin.Helper")) {
             el.style.display = "none";
         }
     },
@@ -7968,7 +7972,7 @@ var DraggablePlaceholderPlugin = defineClass({
                 self.placeholderEl = null;
             }
 
-            if (drg.$hasPlugin("draggable.Helper")) {
+            if (drg.$hasPlugin("draggable.plugin.Helper")) {
                 removeStyle(drg.draggable, "display");
             }
         }
@@ -7978,7 +7982,7 @@ var DraggablePlaceholderPlugin = defineClass({
         var self = this,
             drg = self.drg;
 
-        if (drg.$hasPlugin("draggable.Helper") && !drg.end.restore) {
+        if (drg.$hasPlugin("draggable.plugin.Helper") && !drg.end.restore) {
             self.destroyPlaceholder();
             drg.holderEl = drg.draggable;
         }

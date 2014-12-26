@@ -15,11 +15,13 @@
       "files": [
         "metaphorjs/src/MetaphorJs.js",
         [
-          "src/**",
+          "src/class/**",
           {
             "as": "*"
           }
         ],
+        "src/directive/**",
+        "src/plugin/**",
         [
           "metaphorjs/src/func/dom/onReady.js",
           {

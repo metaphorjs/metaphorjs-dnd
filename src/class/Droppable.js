@@ -1,7 +1,6 @@
 
 
 var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
-    ObservableMixin = require("metaphorjs/src/mixin/ObservableMixin.js"),
     extend = require("metaphorjs/src/func/extend.js"),
     isFunction = require("metaphorjs/src/func/isFunction.js"),
     is = require("metaphorjs-select/src/func/is.js"),
@@ -10,6 +9,8 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
     getOffset = require("metaphorjs/src/func/dom/getOffset.js"),
     getOuterWidth = require("metaphorjs/src/func/dom/getOuterWidth.js"),
     getOuterHeight = require("metaphorjs/src/func/dom/getOuterHeight.js");
+
+require("metaphorjs-observable/src/mixin/Observable.js");
 
 module.exports = (function(){
 
@@ -29,7 +30,7 @@ module.exports = (function(){
     var Droppable = defineClass({
 
         $class:  "Draggable",
-        $mixins: [ObservableMixin],
+        $mixins: ["mixin.Observable"],
         droppable: null,
         enabled: true,
         active: false,

@@ -2,7 +2,6 @@
 var extend = require("metaphorjs/src/func/extend.js"),
     bind = require("metaphorjs/src/func/bind.js"),
     defineClass = require("metaphorjs-class/src/func/defineClass.js"),
-    ObservableMixin = require("metaphorjs/src/mixin/ObservableMixin.js"),
     addListener = require("metaphorjs/src/func/event/addListener.js"),
     removeListener = require("metaphorjs/src/func/event/removeListener.js"),
     addClass = require("metaphorjs/src/func/dom/addClass.js"),
@@ -20,6 +19,8 @@ var extend = require("metaphorjs/src/func/extend.js"),
     animate = require("metaphorjs-animate/src/func/animate.js"),
     browserHasEvent = require("metaphorjs/src/func/browser/browserHasEvent.js"),
     select = require("metaphorjs-select/src/func/select.js");
+
+require("metaphorjs-observable/src/mixin/Observable.js");
 
 module.exports = function () {
 
@@ -141,7 +142,7 @@ module.exports = function () {
     return defineClass({
 
         $class:  "Draggable",
-        $mixins: [ObservableMixin],
+        $mixins: ["mixin.Observable"],
 
         draggable: null,
 
@@ -166,19 +167,19 @@ module.exports = function () {
             var self = this;
 
             if (cfg.helper.tpl || cfg.helper.fn) {
-                self.$plugins.push("draggable.Helper");
+                self.$plugins.push("draggable.plugin.Helper");
             }
 
             if (cfg.placeholder.tpl || cfg.placeholder.fn) {
-                self.$plugins.push("draggable.Placeholder");
+                self.$plugins.push("draggable.plugin.Placeholder");
             }
 
             if (cfg.boundary) {
-                self.$plugins.push("draggable.Boundary");
+                self.$plugins.push("draggable.plugin.Boundary");
             }
 
             if (cfg.drop) {
-                self.$plugins.push("draggable.Drop");
+                self.$plugins.push("draggable.plugin.Drop");
             }
 
             self.$super(cfg);

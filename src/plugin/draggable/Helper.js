@@ -5,7 +5,7 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
 
 
 module.exports = defineClass({
-    $class: "draggable.Helper",
+    $class: "draggable.plugin.Helper",
 
     drg: null,
     helperEl: null,
