@@ -82,6 +82,8 @@ module.exports = defineClass({
                 };
             }
         }
+
+        //console.log(self.bnd)
     },
 
     onStart: function() {

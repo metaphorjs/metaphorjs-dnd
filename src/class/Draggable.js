@@ -13,6 +13,7 @@ var extend = require("metaphorjs/src/func/extend.js"),
     getOuterHeight = require("metaphorjs/src/func/dom/getOuterHeight.js"),
     getScrollTop = require("metaphorjs/src/func/dom/getScrollTop.js"),
     getScrollLeft = require("metaphorjs/src/func/dom/getScrollLeft.js"),
+    getScrollParent = require("metaphorjs/src/func/dom/getScrollParent.js"),
     getStyle = require("metaphorjs/src/func/dom/getStyle.js"),
     getAnimationPrefixes = require("metaphorjs-animate/src/func/getAnimationPrefixes.js"),
     async = require("metaphorjs/src/func/async.js"),
@@ -445,6 +446,8 @@ module.exports = function () {
 
             state.offsetY -= self.cursor.offsetY;
             state.offsetX -= self.cursor.offsetX;
+
+            //console.log(state)
         },
 
 
@@ -509,21 +512,25 @@ module.exports = function () {
 
             var self = this,
                 state = self.state,
-                pos = {},
-                st = getScrollTop(window),
-                sl = getScrollLeft(window);
+                pos = {};
+                //sp = getScrollParent(self.dragEl),
+                //st = getScrollTop(sp || window),
+                //sl = getScrollLeft(sp || window);
+
+            //console.log(st, e.clientX, sp)
 
             // rel position
-            pos.left = sl + e.clientX - state.offsetX - (state.x - state.left);
-            pos.top = st + e.clientY - state.offsetY - (state.y - state.top);
+            pos.left = e.clientX - state.offsetX - (state.x - state.left);
+            pos.top = e.clientY - state.offsetY - (state.y - state.top);
 
             // abs position
-            pos.x = sl + e.clientX - state.offsetX;
-            pos.y = st + e.clientY - state.offsetY;
+            pos.x = e.clientX - state.offsetX; //sl +
+            pos.y = e.clientY - state.offsetY; // st +
 
             // transform
-            pos.translateX = sl + e.clientX - state.offsetX - state.x;
-            pos.translateY = st + e.clientY - state.offsetY - state.y;
+            pos.translateX = e.clientX - state.offsetX - state.x;
+            pos.translateY = e.clientY - state.offsetY - state.y;
+
 
             return pos;
         },

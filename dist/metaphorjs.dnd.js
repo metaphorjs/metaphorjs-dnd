@@ -712,6 +712,10 @@ var Class = function(){
                 ret             = fn.apply(self, arguments);
                 self.$super     = prev;
 
+                if (self.$destroyed) {
+                    self.$super = null;
+                }
+
                 return ret;
             };
         },
@@ -881,6 +885,7 @@ var Class = function(){
             $mixins: null,
 
             $destroyed: false,
+            $destroying: false,
 
             $constructor: emptyFn,
             $init: emptyFn,
@@ -964,11 +969,11 @@ var Class = function(){
                     plugins = self.$plugins,
                     i, l, res;
 
-                if (self.$destroyed) {
+                if (self.$destroying || self.$destroyed) {
                     return;
                 }
 
-                self.$destroyed = true;
+                self.$destroying = true;
 
                 for (i = -1, l = before.length; ++i < l;
                      before[i].apply(self, arguments)){}
@@ -996,6 +1001,7 @@ var Class = function(){
                     }
                 }
 
+                self.$destroying = false;
                 self.$destroyed = true;
             },
 
@@ -2090,6 +2096,44 @@ var getOuterWidth = getDimensions("outer", "Width");
 
 
 var getOuterHeight = getDimensions("outer", "Height");
+
+
+
+var getScrollParent = function() {
+
+    var rOvf        = /(auto|scroll)/,
+        body,
+
+        overflow    = function (node) {
+            var style = getStyle(node);
+            return style["overflow"] + style["overflowY"] + style["overflowY"];
+        },
+
+        scroll      = function (node) {
+            return rOvf.test(overflow(node));
+        };
+
+    return function getScrollParent(node) {
+
+        if (!body) {
+            body = window.document.body;
+        }
+
+        var parent = node;
+
+        while (parent) {
+            if (parent === body) {
+                return window;
+            }
+            if (scroll(parent)) {
+                return parent;
+            }
+            parent = parent.parentNode;
+        }
+
+        return window;
+    };
+}();
 
 
 
@@ -3487,6 +3531,7 @@ var animate = function(){
 
         // no animation happened
 
+
         if (startCallback) {
             var promise = startCallback(el);
             if (isThenable(promise)) {
@@ -3495,12 +3540,17 @@ var animate = function(){
                 });
             }
             else {
-                deferred.resolve(el);
+                //raf(function(){
+                    deferred.resolve(el);
+                //});
             }
         }
         else {
-            deferred.resolve(el);
+            //raf(function(){
+                deferred.resolve(el);
+            //});
         }
+
 
         return deferred;
     };
@@ -4967,6 +5017,13 @@ ns.register("mixin.Observable", {
 
         self.$$observable = new Observable;
 
+        self.$initObservable(cfg);
+    },
+
+    $initObservable: function(cfg) {
+
+        var self = this;
+
         if (cfg && cfg.callback) {
             var ls = cfg.callback,
                 context = ls.context || ls.scope,
@@ -5449,6 +5506,8 @@ var Draggable = function () {
 
             state.offsetY -= self.cursor.offsetY;
             state.offsetX -= self.cursor.offsetX;
+
+            //console.log(state)
         },
 
 
@@ -5513,21 +5572,25 @@ var Draggable = function () {
 
             var self = this,
                 state = self.state,
-                pos = {},
-                st = getScrollTop(window),
-                sl = getScrollLeft(window);
+                pos = {};
+                //sp = getScrollParent(self.dragEl),
+                //st = getScrollTop(sp || window),
+                //sl = getScrollLeft(sp || window);
+
+            //console.log(st, e.clientX, sp)
 
             // rel position
-            pos.left = sl + e.clientX - state.offsetX - (state.x - state.left);
-            pos.top = st + e.clientY - state.offsetY - (state.y - state.top);
+            pos.left = e.clientX - state.offsetX - (state.x - state.left);
+            pos.top = e.clientY - state.offsetY - (state.y - state.top);
 
             // abs position
-            pos.x = sl + e.clientX - state.offsetX;
-            pos.y = st + e.clientY - state.offsetY;
+            pos.x = e.clientX - state.offsetX; //sl +
+            pos.y = e.clientY - state.offsetY; // st +
 
             // transform
-            pos.translateX = sl + e.clientX - state.offsetX - state.x;
-            pos.translateY = st + e.clientY - state.offsetY - state.y;
+            pos.translateX = e.clientX - state.offsetX - state.x;
+            pos.translateY = e.clientY - state.offsetY - state.y;
+
 
             return pos;
         },
@@ -7277,16 +7340,26 @@ var Directive = function(){
             }
 
             scope.$on("destroy", self.onScopeDestroy, self);
+            scope.$on("reset", self.onScopeReset, self);
         },
 
         onScopeDestroy: function() {
             this.$destroy();
         },
 
+        onScopeReset: function() {
+
+        },
+
         onChange: function() {},
 
         destroy: function() {
             var self    = this;
+
+            if (self.scope) {
+                self.scope.$un("destroy", self.onScopeDestroy, self);
+                self.scope.$un("reset", self.onScopeReset, self);
+            }
 
             if (self.watcher) {
                 self.watcher.unsubscribeAndDestroy(self.onChange, self);
@@ -7572,6 +7645,8 @@ defineClass({
                 };
             }
         }
+
+        //console.log(self.bnd)
     },
 
     onStart: function() {

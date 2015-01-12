@@ -38,7 +38,7 @@
             });
 
             window.drp = new MetaphorJs.Droppable({
-                node: document.getElementById("droppable"),
+                droppable: document.getElementById("droppable"),
                 cls: {
                     active: "active",
                     over: "over"
@@ -54,6 +54,7 @@
             background-color: #ccc;
             position:absolute;
             transform: translateZ(1px);
+            z-index: 10;
         }
         #helper {
             width: 100px;
@@ -139,9 +140,10 @@
 
     <!--<div id="stub"></div>-->
     <div id="boundary">
-        <div id="draggable">
-            <div id="handle"></div>
-        </div>
+
+    </div>
+    <div id="draggable">
+        <div id="handle"></div>
     </div>
 
     <div id="droppable">
