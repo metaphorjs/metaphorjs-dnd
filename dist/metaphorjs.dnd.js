@@ -122,7 +122,8 @@ var extend = function(){
         }
 
         while (args.length) {
-            if (src = args.shift()) {
+            // IE < 9 fix: check for hasOwnProperty presence
+            if ((src = args.shift()) && src.hasOwnProperty) {
                 for (k in src) {
 
                     if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
@@ -739,8 +740,8 @@ var Class = function(){
                 return;
             }
 
-            prototype.$plugins = null;
-            prototype.$pluginMap = null;
+            prototype.$plugins      = null;
+            prototype.$pluginMap    = null;
 
             if (pp.$beforeInit) {
                 prototype.$beforeInit = pp.$beforeInit.slice();
@@ -1460,6 +1461,7 @@ extend(DomEvent.prototype, {
         var e = this.originalEvent;
 
         this.isPropagationStopped = returnTrue;
+        e.cancelBubble = true;
 
         if ( e && e.stopPropagation ) {
             e.stopPropagation();
@@ -1634,8 +1636,16 @@ var addListener = function(){
     return function addListener(el, event, func) {
 
         if (fn === null) {
-            fn = el.attachEvent ? "attachEvent" : "addEventListener";
-            prefix = el.attachEvent ? "on" : "";
+            if (el.addEventListener) {
+                fn = "addEventListener";
+                prefix = "";
+            }
+            else {
+                fn = "attachEvent";
+                prefix = "on";
+            }
+            //fn = el.attachEvent ? "attachEvent" : "addEventListener";
+            //prefix = el.attachEvent ? "on" : "";
         }
 
 
@@ -1665,8 +1675,16 @@ var removeListener = function(){
     return function removeListener(el, event, func) {
 
         if (fn === null) {
-            fn = el.detachEvent ? "detachEvent" : "removeEventListener";
-            prefix = el.detachEvent ? "on" : "";
+            if (el.removeEventListener) {
+                fn = "removeEventListener";
+                prefix = "";
+            }
+            else {
+                fn = "detachEvent";
+                prefix = "on";
+            }
+            //fn = el.detachEvent ? "detachEvent" : "removeEventListener";
+            //prefix = el.detachEvent ? "on" : "";
         }
 
         el[fn](prefix + event, func);
@@ -2106,7 +2124,7 @@ var getScrollParent = function() {
 
         overflow    = function (node) {
             var style = getStyle(node);
-            return style["overflow"] + style["overflowY"] + style["overflowY"];
+            return style ? style["overflow"] + style["overflowY"] + style["overflowY"] : "";
         },
 
         scroll      = function (node) {
@@ -2432,22 +2450,54 @@ function isThenable(any) {
 
 
 
-function error(e) {
+var error = (function(){
 
-    var stack = e.stack || (new Error).stack;
+    var listeners = [];
 
-    if (typeof console != strUndef && console.log) {
-        async(function(){
-            console.log(e);
-            if (stack) {
-                console.log(stack);
+    var error = function error(e) {
+
+        var i, l;
+
+        for (i = 0, l = listeners.length; i < l; i++) {
+            listeners[i][0].call(listeners[i][1], e);
+        }
+
+        var stack = (e ? e.stack : null) || (new Error).stack;
+
+        if (typeof console != strUndef && console.log) {
+            async(function(){
+                if (e) {
+                    console.log(e);
+                }
+                if (stack) {
+                    console.log(stack);
+                }
+            });
+        }
+        else {
+            throw e;
+        }
+    };
+
+    error.on = function(fn, context) {
+        error.un(fn, context);
+        listeners.push([fn, context]);
+    };
+
+    error.un = function(fn, context) {
+        var i, l;
+        for (i = 0, l = listeners.length; i < l; i++) {
+            if (listeners[i][0] === fn && listeners[i][1] === context) {
+                listeners.splice(i, 1);
+                break;
             }
-        });
-    }
-    else {
-        throw e;
-    }
-};
+        }
+    };
+
+    return error;
+}());
+
+
 
 
 
@@ -2637,6 +2687,10 @@ var Promise = function(){
         },
 
         isFulfilled: function() {
+            return this._state == FULFILLED;
+        },
+
+        isResolved: function() {
             return this._state == FULFILLED;
         },
 
@@ -4236,6 +4290,15 @@ var select = function() {
 
 
 
+/**
+ * @param {Element} el
+ * @param {String} selector
+ * @returns {boolean}
+ */
+var is = select.is;
+
+
+
 
 var ObservableEvent = (function(){
 
@@ -5022,19 +5085,25 @@ ns.register("mixin.Observable", {
 
     $initObservable: function(cfg) {
 
-        var self = this;
+        var self    = this,
+            obs     = self.$$observable;
 
         if (cfg && cfg.callback) {
             var ls = cfg.callback,
-                context = ls.context || ls.scope,
+                context = ls.context || ls.scope || ls.$context,
+                events = extend({}, self.$$events, ls.$events, true, false),
                 i;
+
+            for (i in events) {
+                obs.createEvent(i, events[i]);
+            }
 
             ls.context = null;
             ls.scope = null;
 
             for (i in ls) {
                 if (ls[i]) {
-                    self.$$observable.on(i, ls[i], context || self);
+                    obs.on(i, ls[i], context || self);
                 }
             }
 
@@ -5136,7 +5205,8 @@ var Draggable = function () {
             distance:      0,
             hold:          0,
             holdThreshold: 20,
-            animate:       false
+            animate:       false,
+            not:           null
         },
 
         end: {
@@ -5223,6 +5293,7 @@ var Draggable = function () {
         state:          null,
 
         $constructor: function (cfg) {
+
             extend(cfg, defaults, false, true);
 
             var self = this;
@@ -5376,9 +5447,33 @@ var Draggable = function () {
 
         },
 
+        isValidMousedown: function(e) {
+
+            var self = this;
+
+            if (!self.start.not) {
+                return true;
+            }
+
+            var trg     = e.target,
+                not     = self.start.not;
+
+            while (trg) {
+                if (is(trg, not)) {
+                    return false;
+                }
+                trg = trg.parentNode;
+            }
+
+            return true;
+        },
+
 
         onMousedown: function (e) {
             e = prepareEvent(e, this.handleEl);
+            if (!this.isValidMousedown(e)) {
+                return;
+            }
             this.dragStart(e);
             return this.processEvent(e);
         },
@@ -5734,15 +5829,6 @@ var Draggable = function () {
 
 
 }();
-
-
-
-/**
- * @param {Element} el
- * @param {String} selector
- * @returns {boolean}
- */
-var is = select.is;
 
 
 
@@ -7827,12 +7913,14 @@ function toFragment(nodes) {
         fragment.appendChild(nodes);
     }
     else {
+        // due to a bug in jsdom, we turn NodeList into array first
         if (nodes.item) {
-            for (i = -1, l = nodes.length >>> 0; ++i !== l; fragment.appendChild(nodes[0])) {}
+            var tmpNodes = nodes;
+            nodes = [];
+            for (i = -1, l = tmpNodes.length >>> 0; ++i !== l; nodes.push(tmpNodes[i])) {}
         }
-        else {
-            for (i = -1, l = nodes.length; ++i !== l; fragment.appendChild(nodes[i])) {}
-        }
+
+        for (i = -1, l = nodes.length; ++i !== l; fragment.appendChild(nodes[i])) {}
     }
 
     return fragment;

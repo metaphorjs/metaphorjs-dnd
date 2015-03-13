@@ -19,7 +19,8 @@ var extend = require("metaphorjs/src/func/extend.js"),
     async = require("metaphorjs/src/func/async.js"),
     animate = require("metaphorjs-animate/src/func/animate.js"),
     browserHasEvent = require("metaphorjs/src/func/browser/browserHasEvent.js"),
-    select = require("metaphorjs-select/src/func/select.js");
+    select = require("metaphorjs-select/src/func/select.js"),
+    is = require("metaphorjs-select/src/func/is.js");
 
 require("metaphorjs-observable/src/mixin/Observable.js");
 
@@ -76,7 +77,8 @@ module.exports = function () {
             distance:      0,
             hold:          0,
             holdThreshold: 20,
-            animate:       false
+            animate:       false,
+            not:           null
         },
 
         end: {
@@ -163,6 +165,7 @@ module.exports = function () {
         state:          null,
 
         $constructor: function (cfg) {
+
             extend(cfg, defaults, false, true);
 
             var self = this;
@@ -316,9 +319,33 @@ module.exports = function () {
 
         },
 
+        isValidMousedown: function(e) {
+
+            var self = this;
+
+            if (!self.start.not) {
+                return true;
+            }
+
+            var trg     = e.target,
+                not     = self.start.not;
+
+            while (trg) {
+                if (is(trg, not)) {
+                    return false;
+                }
+                trg = trg.parentNode;
+            }
+
+            return true;
+        },
+
 
         onMousedown: function (e) {
             e = prepareEvent(e, this.handleEl);
+            if (!this.isValidMousedown(e)) {
+                return;
+            }
             this.dragStart(e);
             return this.processEvent(e);
         },
