@@ -4,11 +4,10 @@ var Directive = require("metaphorjs/src/class/Directive.js"),
     createWatchable = require("metaphorjs-watchable/src/func/createWatchable.js"),
     Draggable = require("../class/Draggable.js");
 
-Directive.registerAttribute("draggable", 1000, function(scope, node, expr){
+Directive.registerAttribute("draggable", 1000, function(scope, node, expr, renderer, attr){
 
     var cfg = createGetter(expr)(scope) || {},
-        nodeCfg = attrMap['modifier']['draggable'] ?
-                    attrMap['modifier']['draggable'] : {},
+        nodeCfg = attr ? attr.config : {},
         watcher,
         draggable,
         onChange = function(val) {
@@ -17,8 +16,8 @@ Directive.registerAttribute("draggable", 1000, function(scope, node, expr){
 
     cfg.draggable = node;
 
-    if (nodeCfg.draggableIf) {
-        watcher = createWatchable(scope, nodeCfg.draggableIf, onChange);
+    if (nodeCfg.if) {
+        watcher = createWatchable(scope, nodeCfg.if, onChange);
         if (!watcher.getLastResult()) {
             cfg.enabled = false;
         }

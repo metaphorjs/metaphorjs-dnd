@@ -5,11 +5,10 @@ var Directive = require("metaphorjs/src/class/Directive.js"),
     Droppable = require("../class/Droppable.js");
 
 Directive.registerAttribute("droppable", 1000,
-    function(scope, node, expr, parentRenderer, attrMap){
+    function(scope, node, expr, parentRenderer, attr){
 
     var cfg = createGetter(expr)(scope) || {},
-        nodeCfg = attrMap['modifier']['droppable'] ?
-                    attrMap['modifier']['droppable'] : {},
+        nodeCfg = attr ? attr.config : {},
         watcher,
         droppable,
         onChange = function(val) {
@@ -18,8 +17,8 @@ Directive.registerAttribute("droppable", 1000,
 
     cfg.droppable = node;
 
-    if (nodeCfg.droppableIf) {
-        watcher = createWatchable(scope, nodeCfg.droppableIf, onChange);
+    if (nodeCfg.if) {
+        watcher = createWatchable(scope, nodeCfg.if, onChange);
         if (!watcher.getLastResult()) {
             cfg.enabled = false;
         }
