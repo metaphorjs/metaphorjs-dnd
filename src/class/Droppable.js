@@ -1,6 +1,7 @@
 
 
-var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
+var cls = require("metaphorjs-class/src/cls.js"),
+    MetaphorJs = require("metaphorjs/src/MetaphorJs.js"),
     extend = require("metaphorjs/src/func/extend.js"),
     isFunction = require("metaphorjs/src/func/isFunction.js"),
     is = require("metaphorjs-select/src/func/is.js"),
@@ -27,10 +28,10 @@ module.exports = (function(){
 
     var all = [];
 
-    var Droppable = defineClass({
+    var Droppable = cls({
 
-        $class:  "Draggable",
-        $mixins: ["mixin.Observable"],
+        $class:  "MetaphorJs.dnd.Droppable",
+        $mixins: [MetaphorJs.mixin.Observable],
         droppable: null,
         enabled: true,
         active: false,
@@ -190,7 +191,7 @@ module.exports = (function(){
             self.trigger('deactivate', self);
         },
 
-        destroy: function() {
+        onDestroy: function() {
 
             var self = this;
 

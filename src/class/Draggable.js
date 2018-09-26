@@ -1,7 +1,8 @@
 
 var extend = require("metaphorjs/src/func/extend.js"),
     bind = require("metaphorjs/src/func/bind.js"),
-    defineClass = require("metaphorjs-class/src/func/defineClass.js"),
+    cls = require("metaphorjs-class/src/cls.js"),
+    MetaphorJs = require("metaphorjs/src/MetaphorJs.js"),
     addListener = require("metaphorjs/src/func/event/addListener.js"),
     removeListener = require("metaphorjs/src/func/event/removeListener.js"),
     addClass = require("metaphorjs/src/func/dom/addClass.js"),
@@ -11,9 +12,6 @@ var extend = require("metaphorjs/src/func/extend.js"),
     getPosition = require("metaphorjs/src/func/dom/getPosition.js"),
     getOuterWidth = require("metaphorjs/src/func/dom/getOuterWidth.js"),
     getOuterHeight = require("metaphorjs/src/func/dom/getOuterHeight.js"),
-    getScrollTop = require("metaphorjs/src/func/dom/getScrollTop.js"),
-    getScrollLeft = require("metaphorjs/src/func/dom/getScrollLeft.js"),
-    getScrollParent = require("metaphorjs/src/func/dom/getScrollParent.js"),
     getStyle = require("metaphorjs/src/func/dom/getStyle.js"),
     getAnimationPrefixes = require("metaphorjs-animate/src/func/getAnimationPrefixes.js"),
     async = require("metaphorjs/src/func/async.js"),
@@ -23,6 +21,10 @@ var extend = require("metaphorjs/src/func/extend.js"),
     is = require("metaphorjs-select/src/func/is.js");
 
 require("metaphorjs-observable/src/mixin/Observable.js");
+require("../plugin/Boundary.js");
+require("../plugin/draggable/Drop.js");
+require("../plugin/Helper.js");
+require("../plugin/Placeholder.js");
 
 module.exports = function () {
 
@@ -142,10 +144,10 @@ module.exports = function () {
         }
     };
 
-    return defineClass({
+    return cls({
 
-        $class:  "Draggable",
-        $mixins: ["mixin.Observable"],
+        $class:  "MetaphorJs.dnd.Draggable",
+        $mixins: [MetaphorJs.mixin.Observable],
 
         draggable: null,
 
@@ -168,22 +170,23 @@ module.exports = function () {
 
             extend(cfg, defaults, false, true);
 
-            var self = this;
+            var self = this,
+                pls = MetaphorJs.dnd.plugin;
 
             if (cfg.helper.tpl || cfg.helper.fn) {
-                self.$plugins.push("draggable.plugin.Helper");
+                self.$plugins.push(pls.Helper);
             }
 
             if (cfg.placeholder.tpl || cfg.placeholder.fn) {
-                self.$plugins.push("draggable.plugin.Placeholder");
+                self.$plugins.push(pls.Placeholder);
             }
 
             if (cfg.boundary) {
-                self.$plugins.push("draggable.plugin.Boundary");
+                self.$plugins.push(pls.Boundary);
             }
 
             if (cfg.drop) {
-                self.$plugins.push("draggable.plugin.Drop");
+                self.$plugins.push(pls.Drop);
             }
 
             self.$super(cfg);
@@ -690,7 +693,7 @@ module.exports = function () {
             this.trigger("end-animation", this);
         },
 
-        destroy: function () {
+        onDestroy: function () {
 
             this.disable();
             this.draggable.$$draggable = null;

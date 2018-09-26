@@ -1,4 +1,5 @@
 (function(){
+/* BUNDLE START 003 */
 "use strict";
 
 
@@ -32,7 +33,7 @@ var varType = function(){
     };
 
 
-    /**
+    /*
      * 'string': 0,
      * 'number': 1,
      * 'boolean': 2,
@@ -48,6 +49,9 @@ var varType = function(){
      * @param {*} value
      * @returns {number}
      */
+
+
+
     return function varType(val) {
 
         if (!val) {
@@ -65,7 +69,7 @@ var varType = function(){
             return -1;
         }
 
-        if (num == 1 && isNaN(val)) {
+        if (num === 1 && isNaN(val)) {
             return 8;
         }
 
@@ -194,7 +198,7 @@ function isString(value) {
  * @returns {boolean}
  */
 function isArray(value) {
-    return typeof value == "object" && varType(value) === 5;
+    return typeof value === "object" && varType(value) === 5;
 };
 
 var strUndef = "undefined";
@@ -217,8 +221,11 @@ var Cache = function(){
 
     /**
      * @class Cache
-     * @param {bool} cacheRewritable
+     */
+
+    /**
      * @constructor
+     * @param {bool} cacheRewritable
      */
     var Cache = function(cacheRewritable) {
 
@@ -390,7 +397,7 @@ var Namespace = function(){
             rootL   = rootName ? rootName.length : null;
 
         if (!root) {
-            if (typeof global != strUndef) {
+            if (typeof global !== strUndef) {
                 root    = global;
             }
             else {
@@ -399,7 +406,7 @@ var Namespace = function(){
         }
 
         var normalize   = function(ns) {
-            if (ns && rootName && ns.substr(0, rootL) != rootName) {
+            if (ns && rootName && ns.substr(0, rootL) !== rootName) {
                 return rootName + "." + ns;
             }
             return ns;
@@ -427,7 +434,7 @@ var Namespace = function(){
 
                     name    = tmp[i];
 
-                    if (rootName && i == 0 && name == rootName) {
+                    if (rootName && i === 0 && name === rootName) {
                         current = root;
                         continue;
                     }
@@ -472,7 +479,7 @@ var Namespace = function(){
 
                 name    = tmp[i];
 
-                if (rootName && i == 0 && name == rootName) {
+                if (rootName && i === 0 && name === rootName) {
                     current = root;
                     continue;
                 }
@@ -600,14 +607,12 @@ var Namespace = function(){
         self.destroy    = destroy;
     };
 
-    Namespace.prototype.register = null;
-    Namespace.prototype.exists = null;
-    Namespace.prototype.get = null;
-    Namespace.prototype.add = null;
-    Namespace.prototype.remove = null;
-    Namespace.prototype.normalize = null;
-    Namespace.prototype.makeAlias = null;
-    Namespace.prototype.destroy = null;
+    var p = Namespace.prototype;
+
+    p.register = p.exists = p.get = p.add = 
+        p.remove = p.normalize = 
+        p.makeAlias = p.destroy = null;
+    p = null;
 
     var globalNs;
 
@@ -702,20 +707,23 @@ var Class = function(){
 
         wrapPrototypeMethod = function wrapPrototypeMethod(parent, k, fn) {
 
-            var $super = parent[proto][k] || (k == constr ? parent : emptyFn) || emptyFn;
+            var $super = parent[proto][k] ||
+                        (k === constr ? parent : emptyFn) ||
+                        emptyFn;
 
             return function() {
                 var ret,
                     self    = this,
                     prev    = self.$super;
 
+                if (self.$destroyed) {
+                    self.$super = null;
+                    return null;
+                }
+
                 self.$super     = $super;
                 ret             = fn.apply(self, arguments);
                 self.$super     = prev;
-
-                if (self.$destroyed) {
-                    self.$super = null;
-                }
 
                 return ret;
             };
@@ -762,16 +770,16 @@ var Class = function(){
             var k;
             for (k in mixin) {
                 if (mixin.hasOwnProperty(k)) {
-                    if (k == "$beforeInit") {
+                    if (k === "$beforeInit") {
                         prototype.$beforeInit.push(mixin[k]);
                     }
-                    else if (k == "$afterInit") {
+                    else if (k === "$afterInit") {
                         prototype.$afterInit.push(mixin[k]);
                     }
-                    else if (k == "$beforeDestroy") {
+                    else if (k === "$beforeDestroy") {
                         prototype.$beforeDestroy.push(mixin[k]);
                     }
-                    else if (k == "$afterDestroy") {
+                    else if (k === "$afterDestroy") {
                         prototype.$afterDestroy.push(mixin[k]);
                     }
                     else if (!prototype[k]) {
@@ -836,9 +844,8 @@ var Class = function(){
                                 throw plCls + " not found";
                             }
                         }
-
+ 
                         plugin = new plugin(self, args);
-
                         pmap[plugin.$class] = plugin;
 
                         if (plugin.$beforeHostInit) {
@@ -905,6 +912,14 @@ var Class = function(){
             },
 
             /**
+             * @param {string} cls
+             * @returns {boolean}
+             */
+            $is: function(cls) {
+                return isInstanceOf(this, cls);
+            },
+
+            /**
              * Get parent class name
              * @method
              * @returns {string | null}
@@ -926,8 +941,8 @@ var Class = function(){
             $intercept: function(method, fn, newContext, when, replaceValue) {
                 var self = this,
                     orig = self[method];
-                self[method] = intercept(orig, fn, newContext || self, self, when, replaceValue);
-                return orig;
+                self[method] = intercept(orig || emptyFn, fn, newContext || self, self, when, replaceValue);
+                return orig || emptyFn;
             },
 
             /**
@@ -937,14 +952,14 @@ var Class = function(){
             $implement: function(methods) {
                 var $self = this.constructor;
                 if ($self && $self.$parent) {
-                    preparePrototype(this, methods, $self.$parent);
+                    preparePrototype(this, methods, $self.$parent, true);
                 }
             },
 
             /**
              * Does this instance have a plugin
              * @param cls
-             * @returns {bool}
+             * @returns {boolean}
              */
             $hasPlugin: function(cls) {
                 return !!this.$pluginMap[ns.normalize(cls)];
@@ -956,6 +971,26 @@ var Class = function(){
              */
             $getPlugin: function(cls) {
                 return this.$pluginMap[ns.normalize(cls)] || null;
+            },
+
+            /**
+             * @param {function} fn
+             * @returns {Function}
+             */
+            $bind: function(fn) {
+                var self = this;
+                return function() {
+                    if (!self.$isDestroyed()) {
+                        return fn.apply(self, arguments);
+                    }
+                };
+            },
+
+            /**
+             * @return boolean
+             */
+            $isDestroyed: function() {
+                return self.$destroying || self.$destroyed;
             },
 
             /**
@@ -987,7 +1022,7 @@ var Class = function(){
 
                 res = self.destroy.apply(self, arguments);
 
-                for (i = -1, l = before.length; ++i < l;
+                for (i = -1, l = after.length; ++i < l;
                      after[i].apply(self, arguments)){}
 
                 for (i = 0, l = plugins.length; i < l; i++) {
@@ -1065,7 +1100,7 @@ var Class = function(){
          * @returns {function}
          */
         BaseClass.$extend = function(definition, statics) {
-            return define(definition, statics, this);
+            return defineClass(definition, statics, this);
         };
 
         /**
@@ -1112,13 +1147,14 @@ var Class = function(){
          * @param {string|function} $extends this is a private parameter; use definition.$extends
          * @code var cls = cs.define({$class: "Name"});
          */
-        var define = function(definition, statics, $extends) {
+        var defineClass = function(definition, statics, $extends) {
 
             definition          = definition || {};
             
             var name            = definition.$class,
                 parentClass     = $extends || definition.$extends,
                 mixins          = definition.$mixins,
+                alias           = definition.$alias,
                 pConstructor,
                 i, l, k, noop, prototype, c, mixin;
 
@@ -1148,11 +1184,11 @@ var Class = function(){
             definition.$extends = parentClass;
             definition.$mixins  = null;
 
-
-            noop                = function(){};
-            noop[proto]         = pConstructor[proto];
-            prototype           = new noop;
-            noop                = null;
+            //noop                = function(){};
+            //noop[proto]         = pConstructor[proto];
+            //prototype           = new noop;
+            //noop                = null;
+            prototype           = Object.create(pConstructor[proto]);
             definition[constr]  = definition[constr] || $constr;
 
             preparePrototype(prototype, definition, pConstructor);
@@ -1169,23 +1205,24 @@ var Class = function(){
 
             c = createConstructor(name);
             prototype.constructor = c;
+            prototype.$self = c;
             c[proto] = prototype;
 
             for (k in BaseClass) {
-                if (k != proto && BaseClass.hasOwnProperty(k)) {
+                if (k !== proto && BaseClass.hasOwnProperty(k)) {
                     c[k] = BaseClass[k];
                 }
             }
 
             for (k in pConstructor) {
-                if (k != proto && pConstructor.hasOwnProperty(k)) {
+                if (k !== proto && pConstructor.hasOwnProperty(k)) {
                     c[k] = pConstructor[k];
                 }
             }
 
             if (statics) {
                 for (k in statics) {
-                    if (k != proto && statics.hasOwnProperty(k)) {
+                    if (k !== proto && statics.hasOwnProperty(k)) {
                         c[k] = statics[k];
                     }
                 }
@@ -1196,6 +1233,9 @@ var Class = function(){
 
             if (name) {
                 ns.register(name, c);
+            }
+            if (alias) {
+                ns.register(alias, c);
             }
 
             return c;
@@ -1250,7 +1290,7 @@ var Class = function(){
          * @code cs.isSubclassOf(myObj, My.Class);
          * @param {string|object} childClass
          * @param {string|object} parentClass
-         * @return {bool}
+         * @return {boolean}
          */
         var isSubclassOf = function(childClass, parentClass) {
 
@@ -1269,7 +1309,7 @@ var Class = function(){
 
             while (p && p.prototype) {
 
-                if (p.prototype.$class == parentClass) {
+                if (p.prototype.$class === parentClass) {
                     return true;
                 }
 
@@ -1284,7 +1324,7 @@ var Class = function(){
         self.factory = factory;
         self.isSubclassOf = isSubclassOf;
         self.isInstanceOf = isInstanceOf;
-        self.define = define;
+        self.define = defineClass;
 
         self.destroy = function(){
 
@@ -1340,7 +1380,7 @@ var Class = function(){
 
 
 
-var ns  = new Namespace(MetaphorJs, "MetaphorJs");
+var ns = new Namespace(MetaphorJs, "MetaphorJs");
 
 
 
@@ -1782,6 +1822,13 @@ var getScrollTopOrLeft = function(vertical) {
         body = doc.body,
         html = doc.documentElement;
 
+    var ret = function(scroll, allowNegative) {
+        if (scroll < 0 && allowNegative === false) {
+            return 0;
+        }
+        return scroll;
+    };
+
     if(window[wProp] !== undf) {
         //most browsers except IE before #9
         defaultST = function(){
@@ -1801,16 +1848,16 @@ var getScrollTopOrLeft = function(vertical) {
         }
     }
 
-    return function(node) {
+    return function(node, allowNegative) {
         if (!node || node === window) {
-            return defaultST();
+            return ret(defaultST(), allowNegative);
         }
         else if (node && node.nodeType == 1 &&
             node !== body && node !== html) {
-            return node[sProp];
+            return ret(node[sProp], allowNegative);
         }
         else {
-            return defaultST();
+            return ret(defaultST(), allowNegative);
         }
     }
 
@@ -1998,7 +2045,7 @@ var getDimensions = function(type, name) {
 
     var rnumnonpx = new RegExp( "^([+-]?(?:\d*\.|)\d+(?:[eE][+-]?\d+|))(?!px)[a-z%]+$", "i"),
         cssExpand = [ "Top", "Right", "Bottom", "Left" ],
-        defaultExtra = !type ? "content" : (type == "inner" ? "padding" : "");
+        defaultExtra = !type ? "content" : (type === "inner" ? "padding" : "");
 
     var augmentWidthOrHeight = function(elem, name, extra, isBorderBox, styles) {
         var i = extra === (isBorderBox ? "border" : "content") ?
@@ -2257,7 +2304,7 @@ var getAnimationDuration = function(){
                 return 0;
             }
             var time = parseFloat(str);
-            if (str.indexOf("ms") == -1) {
+            if (str.indexOf("ms") === -1) {
                 time *= 1000;
             }
             return time;
@@ -2415,7 +2462,7 @@ var stopAnimation = function(el) {
     else if (isFunction(queue)) {
         queue(el);
     }
-    else if (queue == "stop") {
+    else if (queue === "stop") {
         $(el).stop(true, true);
     }
 
@@ -2459,20 +2506,22 @@ var error = (function(){
         var i, l;
 
         for (i = 0, l = listeners.length; i < l; i++) {
-            listeners[i][0].call(listeners[i][1], e);
+            if (listeners[i][0].call(listeners[i][1], e) === false) {
+                return;
+            }
         }
 
         var stack = (e ? e.stack : null) || (new Error).stack;
 
-        if (typeof console != strUndef && console.log) {
-            async(function(){
+        if (typeof console != strUndef && console.error) {
+            //async(function(){
                 if (e) {
-                    console.log(e);
+                    console.error(e);
                 }
                 if (stack) {
-                    console.log(stack);
+                    console.error(stack);
                 }
-            });
+            //});
         }
         else {
             throw e;
@@ -2512,7 +2561,7 @@ var Promise = function(){
         qRunning    = false,
 
 
-        nextTick    = typeof process != strUndef ?
+        nextTick    = typeof process !== strUndef ?
                         process.nextTick :
                         function(fn) {
                             setTimeout(fn, 0);
@@ -2683,19 +2732,33 @@ var Promise = function(){
         _triggered: false,
 
         isPending: function() {
-            return this._state == PENDING;
+            return this._state === PENDING;
         },
 
         isFulfilled: function() {
-            return this._state == FULFILLED;
+            return this._state === FULFILLED;
         },
 
         isResolved: function() {
-            return this._state == FULFILLED;
+            return this._state === FULFILLED;
         },
 
         isRejected: function() {
-            return this._state == REJECTED;
+            return this._state === REJECTED;
+        },
+
+        hasListeners: function() {
+            var self = this,
+                ls  = [self._fulfills, self._rejects, self._dones, self._fails],
+                i, l;
+
+            for (i = 0, l = ls.length; i < l; i++) {
+                if (ls[i] && ls[i].length) {
+                    return true;
+                }
+            }
+
+            return false;
         },
 
         _cleanup: function() {
@@ -2712,7 +2775,7 @@ var Promise = function(){
             var self    = this,
                 then;
 
-            if (self._state != PENDING) {
+            if (self._state !== PENDING) {
                 return;
             }
 
@@ -2737,7 +2800,7 @@ var Promise = function(){
                 }
             }
             catch (thrownError) {
-                if (self._state == PENDING) {
+                if (self._state === PENDING) {
                     self._doReject(thrownError);
                 }
                 return;
@@ -2770,7 +2833,7 @@ var Promise = function(){
             self._value = value;
             self._state = FULFILLED;
 
-            if (self._wait == 0) {
+            if (self._wait === 0) {
                 self._callResolveHandlers();
             }
         },
@@ -2820,7 +2883,7 @@ var Promise = function(){
             self._state     = REJECTED;
             self._reason    = reason;
 
-            if (self._wait == 0) {
+            if (self._wait === 0) {
                 self._callRejectHandlers();
             }
         },
@@ -2851,15 +2914,25 @@ var Promise = function(){
         /**
          * @param {Function} resolve -- called when this promise is resolved; returns new resolve value
          * @param {Function} reject -- called when this promise is rejects; returns new reject reason
+         * @param {object} context -- resolve's and reject's functions "this" object
          * @returns {Promise} new promise
          */
-        then: function(resolve, reject) {
+        then: function(resolve, reject, context) {
 
             var self            = this,
                 promise         = new Promise,
                 state           = self._state;
 
-            if (state == PENDING || self._wait != 0) {
+            if (context) {
+                if (resolve) {
+                    resolve = bind(resolve, context);
+                }
+                if (reject) {
+                    reject = bind(reject, context);
+                }
+            }
+
+            if (state === PENDING || self._wait !== 0) {
 
                 if (resolve && isFunction(resolve)) {
                     self._fulfills.push([wrapper(resolve, promise), null]);
@@ -2875,7 +2948,7 @@ var Promise = function(){
                     self._rejects.push([promise.reject, promise]);
                 }
             }
-            else if (state == FULFILLED) {
+            else if (state === FULFILLED) {
 
                 if (resolve && isFunction(resolve)) {
                     next(wrapper(resolve, promise), null, [self._value]);
@@ -2884,7 +2957,7 @@ var Promise = function(){
                     promise.resolve(self._value);
                 }
             }
-            else if (state == REJECTED) {
+            else if (state === REJECTED) {
                 if (reject && isFunction(reject)) {
                     next(wrapper(reject, promise), null, [self._reason]);
                 }
@@ -2929,7 +3002,7 @@ var Promise = function(){
             var self    = this,
                 state   = self._state;
 
-            if (state == FULFILLED && self._wait == 0) {
+            if (state === FULFILLED && self._wait === 0) {
                 try {
                     fn.call(context || null, self._value);
                 }
@@ -2937,7 +3010,7 @@ var Promise = function(){
                     error(thrown);
                 }
             }
-            else if (state == PENDING) {
+            else if (state === PENDING) {
                 self._dones.push([fn, context]);
             }
 
@@ -2970,7 +3043,7 @@ var Promise = function(){
             var self    = this,
                 state   = self._state;
 
-            if (state == REJECTED && self._wait == 0) {
+            if (state === REJECTED && self._wait === 0) {
                 try {
                     fn.call(context || null, self._reason);
                 }
@@ -2978,7 +3051,7 @@ var Promise = function(){
                     error(thrown);
                 }
             }
-            else if (state == PENDING) {
+            else if (state === PENDING) {
                 self._fails.push([fn, context]);
             }
 
@@ -3019,8 +3092,8 @@ var Promise = function(){
 
                 var done = function() {
                     self._wait--;
-                    if (self._wait == 0 && self._state != PENDING) {
-                        self._state == FULFILLED ?
+                    if (self._wait === 0 && self._state !== PENDING) {
+                        self._state === FULFILLED ?
                             self._callResolveHandlers() :
                             self._callRejectHandlers();
                     }
@@ -3095,7 +3168,7 @@ var Promise = function(){
                 values[inx] = value;
                 cnt--;
 
-                if (cnt == 0) {
+                if (cnt === 0) {
                     p.resolve(values);
                 }
             };
@@ -3161,7 +3234,7 @@ var Promise = function(){
             },
             proceed = function() {
                 cnt--;
-                if (cnt == 0) {
+                if (cnt === 0) {
                     p.resolve(values);
                 }
             };
@@ -3254,13 +3327,53 @@ var Promise = function(){
         return promise;
     };
 
+    Promise.forEach = function(items, fn, context, allResolved) {
+
+        var left = items.slice(),
+            p = new Promise,
+            values = [],
+            i = 0;
+
+        var next = function() {
+
+            if (!left.length) {
+                p.resolve(values);
+                return;
+            }
+
+            var item = left.shift(),
+                index = i;
+
+            i++;
+
+            Promise.fcall(fn, context, [item, index])
+                .done(function(result){
+                    values.push(result);
+                    next();
+                })
+                .fail(function(reason){
+                    if (allResolved) {
+                        p.reject(reason);
+                    }
+                    else {
+                        values.push(null);
+                        next();
+                    }
+                });
+        };
+
+        next();
+
+        return p;
+    };
+
     Promise.counter = function(cnt) {
 
         var promise     = new Promise;
 
         promise.countdown = function() {
             cnt--;
-            if (cnt == 0) {
+            if (cnt === 0) {
                 promise.resolve();
             }
         };
@@ -3273,10 +3386,6 @@ var Promise = function(){
 
 
 
-function getAttr(el, name) {
-    return el.getAttribute ? el.getAttribute(name) : null;
-};
-
 
 
 var raf = function() {
@@ -3284,7 +3393,7 @@ var raf = function() {
     var raf,
         cancel;
 
-    if (typeof window != strUndef) {
+    if (typeof window !== strUndef) {
         var w   = window;
         raf     = w.requestAnimationFrame ||
                     w.webkitRequestAnimationFrame ||
@@ -3295,8 +3404,10 @@ var raf = function() {
                     w.webkitCancelRequestAnimationFrame;
 
         if (raf) {
-            return function(fn) {
-                var id = raf(fn);
+            return function(fn, context, args) {
+                var id = raf(context || args ? function(){
+                    fn.apply(context, args || []);
+                } : fn);
                 return function() {
                     cancel(id);
                 };
@@ -3304,12 +3415,13 @@ var raf = function() {
         }
     }
 
-    return function(fn) {
-        var id = setTimeout(fn, 0);
-        return function() {
+    return function(fn, context, args){
+        var id = async(fn, context, args, 0);
+        return function(){
             clearTimeout(id);
-        }
+        };
     };
+
 }();
 
 
@@ -3391,7 +3503,7 @@ var animate = function(){
 
                 position++;
 
-                if (position == stages.length) {
+                if (position === stages.length) {
                     deferred.resolve(el);
                     data(el, dataParam).shift();
                     nextInQueue(el);
@@ -3446,8 +3558,6 @@ var animate = function(){
                 }
             };
 
-
-
             first ? raf(start) : start();
         };
 
@@ -3463,39 +3573,24 @@ var animate = function(){
      *  'object' - {stages, fn, before, after, options, context, duration, start}
      * }
      * @param {function} startCallback call this function before animation begins
-     * @param {bool} checkIfEnabled check if mjs-animate attribute is present
-     * @param {MetaphorJs.Namespace} namespace registered animations storage
      * @param {function} stepCallback call this function between stages
      * @returns {MetaphorJs.Promise}
      */
-    var animate = function animate(el, animation, startCallback, checkIfEnabled, namespace, stepCallback) {
+    var animate = function animate(el, animation, startCallback, stepCallback) {
 
         var deferred    = new Promise,
             queue       = data(el, dataParam) || [],
             id          = ++animId,
-            attrValue   = getAttr(el, "mjs-animate"),
             stages,
             jsFn,
             before, after,
             options, context,
             duration;
 
-        animation       = animation || attrValue;
-
-        if (checkIfEnabled && isNull(attrValue)) {
-            animation   = null;
-        }
-
         if (animation) {
 
             if (isString(animation)) {
-                if (animation.substr(0,1) == '[') {
-                    stages  = (new Function('', 'return ' + animation))();
-                }
-                else {
-                    stages      = types[animation];
-                    animation   = namespace && namespace.get("animate." + animation, true);
-                }
+                stages = types[animation];
             }
             else if (isFunction(animation)) {
                 jsFn = animation;
@@ -3535,7 +3630,7 @@ var animate = function(){
                 });
                 data(el, dataParam, queue);
 
-                if (queue.length == 1) {
+                if (queue.length === 1) {
                     animationStage(el, stages, 0, startCallback, deferred, true, id, stepCallback);
                 }
 
@@ -3585,7 +3680,6 @@ var animate = function(){
 
         // no animation happened
 
-
         if (startCallback) {
             var promise = startCallback(el);
             if (isThenable(promise)) {
@@ -3594,17 +3688,12 @@ var animate = function(){
                 });
             }
             else {
-                //raf(function(){
-                    deferred.resolve(el);
-                //});
+                deferred.resolve(el);
             }
         }
         else {
-            //raf(function(){
-                deferred.resolve(el);
-            //});
+            deferred.resolve(el);
         }
-
 
         return deferred;
     };
@@ -3696,6 +3785,10 @@ function toArray(list) {
     }
 };
 
+function getAttr(el, name) {
+    return el.getAttribute ? el.getAttribute(name) : null;
+};
+
 
 
 /**
@@ -3743,7 +3836,7 @@ var select = function() {
             'last-child': function (child) {
                 var brother = child;
                 /* loop in lastChilds while nodeType isn't element */
-                while ((brother = brother.nextSibling) && brother.nodeType != 1) {}
+                while ((brother = brother.nextSibling) && brother.nodeType !== 1) {}
                 /* Check for node's existence */
                 return !!brother;
             },
@@ -3766,7 +3859,7 @@ var select = function() {
                     /* looping in child to find if nth expression is correct */
                     do {
                         /* nodeIndex expando used from Peppy / Sizzle/ jQuery */
-                        if (brother.nodeType == 1 && (brother.nodeIndex = ++i) && child === brother && ((i + a) % b)) {
+                        if (brother.nodeType === 1 && (brother.nodeIndex = ++i) && child === brother && ((i + a) % b)) {
                             return 0;
                         }
                     } while (brother = brother.nextSibling);
@@ -3788,7 +3881,7 @@ var select = function() {
                     var brother = child.parentNode.lastChild;
                     i++;
                     do {
-                        if (brother.nodeType == 1 && (brother.nodeLastIndex = i++) && child === brother && ((i + a) % b)) {
+                        if (brother.nodeType === 1 && (brother.nodeLastIndex = i++) && child === brother && ((i + a) % b)) {
                             return 0;
                         }
                     } while (brother = brother.previousSibling);
@@ -3808,7 +3901,7 @@ var select = function() {
             },
             /* W3C: "an E element, only child of its parent" */
             'only-child': function (child) {
-                return child.parentNode.getElementsByTagName('*').length != 1;
+                return child.parentNode.getElementsByTagName('*').length !== 1;
             },
             /*
              W3C: "a user interface element E which is checked
@@ -3886,7 +3979,7 @@ var select = function() {
             '$=': function (child, name, value) {
                 var attrValue;
                 return (attrValue = getAttr(child, name) + '') &&
-                       attrValue.indexOf(value) == attrValue.length - value.length;
+                       attrValue.indexOf(value) === attrValue.length - value.length;
             },
             /*
              W3C "an E element whose "attr" attribute value
@@ -3894,7 +3987,7 @@ var select = function() {
              */
             '*=': function (child, name, value) {
                 var attrValue;
-                return (attrValue = getAttr(child, name) + '') && attrValue.indexOf(value) != -1;
+                return (attrValue = getAttr(child, name) + '') && attrValue.indexOf(value) !== -1;
             },
             /*
              W3C "an E element whose "attr" attribute has
@@ -3926,12 +4019,13 @@ var select = function() {
             i, node, ind, mod,
             attrs, attrName, eql, value;
 
-        if (qsa) {
+        if (qsa && root.querySelectorAll) {
             /* replace not quoted args with quoted one -- Safari doesn't understand either */
             try {
                 sets = toArray(root.querySelectorAll(selector.replace(rQuote, '="$1"')));
             }
             catch (thrownError) {
+                //console.log(thrownError);
                 qsaErr = true;
             }
         }
@@ -3983,7 +4077,7 @@ var select = function() {
                             i = 0;
 
                             while (node = nodes[i++]) {
-                                if ((' ' + node.className + ' ').indexOf(cls) != -1) {
+                                if ((' ' + node.className + ' ').indexOf(cls) !== -1) {
                                     sets[idx++] = node;
                                 }
 
@@ -4066,7 +4160,12 @@ var select = function() {
                     i = 0;
                     ancestor = ' ';
                     /* is cleanded up with DOM root */
-                    nodes = [root];
+                    if (root instanceof DocumentFragment) {
+                        nodes = root.children;
+                    }
+                    else {
+                        nodes = [root];
+                    }
 
                     /*
                      John's Resig fast replace works a bit slower than
@@ -4075,7 +4174,8 @@ var select = function() {
                     while (single = singles[i++]) {
 
                         /* simple comparison is faster than hash */
-                        if (single !== ' ' && single !== '>' && single !== '~' && single !== '+' && nodes) {
+                        if (single !== ' ' && single !== '>' &&
+                            single !== '~' && single !== '+' && nodes) {
 
                             single = single.match(rSingleMatch);
 
@@ -4094,7 +4194,8 @@ var select = function() {
                              for nth-childs modificator already transformed into array.
                              Example used from Sizzle, rev. 2008-12-05, line 362.
                              */
-                            ind = mod === 'nth-child' || mod === 'nth-last-child' ?
+                            ind = mod === 'nth-child' ||
+                                    mod === 'nth-last-child' ?
                                   rNthNum.exec(
                                       single[8] === 'even' && '2n' ||
                                       single[8] === 'odd' && '2n%1' ||
@@ -4113,7 +4214,7 @@ var select = function() {
                             idx = J = 0;
 
                             /* if we need to mark node with expando yeasss */
-                            last = i == singles_length;
+                            last = i === singles_length;
 
                             /* loop in all root nodes */
                             while (child = nodes[J++]) {
@@ -4124,33 +4225,35 @@ var select = function() {
                                  */
                                 switch (ancestor) {
                                     case ' ':
-                                        childs = child.getElementsByTagName(tag);
-                                        h = 0;
-                                        while (item = childs[h++]) {
-                                            /*
-                                             check them for ID or Class. Also check for expando 'yeasss'
-                                             to filter non-selected elements. Typeof 'string' not added -
-                                             if we get element with name="id" it won't be equal to given ID string.
-                                             Also check for given attributes selector.
-                                             Modificator is either not set in the selector, or just has been nulled
-                                             by modificator functions hash.
-                                             */
-                                            if ((!id || item.id === id) &&
-                                                (!klass || (' ' + item.className + ' ').indexOf(klass) != -1) &&
-                                                (!attrName || (attrMods[eql] &&
-                                                           (attrMods[eql](item, attrName, single[6]) ||
-                                                            (attrName === 'class' &&
-                                                             attrMods[eql](item, 'className', single[6]))))) &&
-                                                !item.yeasss && !(mods[mod] ? mods[mod](item, ind) : mod)) {
-
+                                        if (child.getElementsByTagName) {
+                                            childs = child.getElementsByTagName(tag);
+                                            h = 0;
+                                            while (item = childs[h++]) {
                                                 /*
-                                                 Need to define expando property to true for the last step.
-                                                 Then mark selected element with expando
-                                                 */
-                                                if (last) {
-                                                    item.yeasss = 1;
+                                                check them for ID or Class. Also check for expando 'yeasss'
+                                                to filter non-selected elements. Typeof 'string' not added -
+                                                if we get element with name="id" it won't be equal to given ID string.
+                                                Also check for given attributes selector.
+                                                Modificator is either not set in the selector, or just has been nulled
+                                                by modificator functions hash.
+                                                */
+                                                if ((!id || item.id === id) &&
+                                                    (!klass || (' ' + item.className + ' ').indexOf(klass) != -1) &&
+                                                    (!attrName || (attrMods[eql] &&
+                                                            (attrMods[eql](item, attrName, single[6]) ||
+                                                                (attrName === 'class' &&
+                                                                attrMods[eql](item, 'className', single[6]))))) &&
+                                                    !item.yeasss && !(mods[mod] ? mods[mod](item, ind) : mod)) {
+
+                                                    /*
+                                                    Need to define expando property to true for the last step.
+                                                    Then mark selected element with expando
+                                                    */
+                                                    if (last) {
+                                                        item.yeasss = 1;
+                                                    }
+                                                    newNodes[idx++] = item;
                                                 }
-                                                newNodes[idx++] = item;
                                             }
                                         }
                                         break;
@@ -4161,10 +4264,10 @@ var select = function() {
 
                                         /* don't touch already selected elements */
                                         while ((child = child.nextSibling) && !child.yeasss) {
-                                            if (child.nodeType == 1 &&
+                                            if (child.nodeType === 1 &&
                                                 (tag === '*' || child.nodeName.toLowerCase() === tag) &&
                                                 (!id || child.id === id) &&
-                                                (!klass || (' ' + child.className + ' ').indexOf(klass) != -1) &&
+                                                (!klass || (' ' + child.className + ' ').indexOf(klass) !== -1) &&
                                                 (!attrName || (attrMods[eql] &&
                                                            (attrMods[eql](item, attrName, single[6]) ||
                                                             (attrName === 'class' &&
@@ -4182,11 +4285,11 @@ var select = function() {
 
                                     /* W3C: "an F element immediately preceded by an E element" */
                                     case '+':
-                                        while ((child = child.nextSibling) && child.nodeType != 1) {}
+                                        while ((child = child.nextSibling) && child.nodeType !== 1) {}
                                         if (child &&
                                             (child.nodeName.toLowerCase() === tag.toLowerCase() || tag === '*') &&
                                             (!id || child.id === id) &&
-                                            (!klass || (' ' + item.className + ' ').indexOf(klass) != -1) &&
+                                            (!klass || (' ' + item.className + ' ').indexOf(klass) !== -1) &&
                                             (!attrName ||
                                              (attrMods[eql] && (attrMods[eql](item, attrName, single[6]) ||
                                                                 (attrName === 'class' &&
@@ -4202,23 +4305,25 @@ var select = function() {
 
                                     /* W3C: "an F element child of an E element" */
                                     case '>':
-                                        childs = child.getElementsByTagName(tag);
-                                        i = 0;
-                                        while (item = childs[i++]) {
-                                            if (item.parentNode === child &&
-                                                (!id || item.id === id) &&
-                                                (!klass || (' ' + item.className + ' ').indexOf(klass) != -1) &&
-                                                (!attrName || (attrMods[eql] &&
-                                                           (attrMods[eql](item, attrName, single[6]) ||
-                                                            (attrName === 'class' &&
-                                                             attrMods[eql](item, 'className', single[6]))))) &&
-                                                !item.yeasss &&
-                                                !(mods[mod] ? mods[mod](item, ind) : mod)) {
+                                        if (child.getElementsByTagName) {
+                                            childs = child.getElementsByTagName(tag);
+                                            i = 0;
+                                            while (item = childs[i++]) {
+                                                if (item.parentNode === child &&
+                                                    (!id || item.id === id) &&
+                                                    (!klass || (' ' + item.className + ' ').indexOf(klass) != -1) &&
+                                                    (!attrName || (attrMods[eql] &&
+                                                            (attrMods[eql](item, attrName, single[6]) ||
+                                                                (attrName === 'class' &&
+                                                                attrMods[eql](item, 'className', single[6]))))) &&
+                                                    !item.yeasss &&
+                                                    !(mods[mod] ? mods[mod](item, ind) : mod)) {
 
-                                                if (last) {
-                                                    item.yeasss = 1;
+                                                    if (last) {
+                                                        item.yeasss = 1;
+                                                    }
+                                                    newNodes[idx++] = item;
                                                 }
-                                                newNodes[idx++] = item;
                                             }
                                         }
                                         break;
@@ -4246,7 +4351,7 @@ var select = function() {
                             nodes = newNodes;
                             /* concat is faster than simple looping */
                         }
-                        sets = nodes.concat(sets.length == 1 ? sets[0] : sets);
+                        sets = nodes.concat(sets.length === 1 ? sets[0] : sets);
 
                     } else {
 
@@ -4300,175 +4405,225 @@ var is = select.is;
 
 
 
-var ObservableEvent = (function(){
+/**
+ * This class is private - you can't create an event other than via Observable.
+ * See {@link class:Observable} reference.
+ * @class ObservableEvent
+ * @private
+ */
+var ObservableEvent = function(name, options) {
+
+    var self    = this;
+
+    self.name           = name;
+    self.listeners      = [];
+    self.map            = {};
+    self.hash           = nextUid();
+    self.uni            = '$$' + name + '_' + self.hash;
+    self.suspended      = false;
+    self.lid            = 0;
+
+    if (typeof options === "object" && options !== null) {
+        extend(self, options, true, false);
+    }
+    else {
+        self.returnResult = options;
+    }
+};
+
+
+extend(ObservableEvent.prototype, {
+
+    name: null,
+    listeners: null,
+    map: null,
+    hash: null,
+    uni: null,
+    suspended: false,
+    lid: null,
+    returnResult: null,
+    autoTrigger: null,
+    lastTrigger: null,
+    triggerFilter: null,
+    filterContext: null,
+    expectPromises: false,
+    resolvePromises: false,
 
     /**
-     * This class is private - you can't create an event other than via Observable.
-     * See Observable reference.
-     * @class ObservableEvent
-     * @private
+     * Get event name
+     * @method
+     * @returns {string}
      */
-    var ObservableEvent = function(name, returnResult, autoTrigger, triggerFilter, filterContext) {
+    getName: function() {
+        return this.name;
+    },
 
-        var self    = this;
+    /**
+     * @method
+     */
+    destroy: function() {
+        var self        = this,
+            k;
 
-        self.name           = name;
-        self.listeners      = [];
-        self.map            = {};
-        self.hash           = nextUid();
-        self.uni            = '$$' + name + '_' + self.hash;
-        self.suspended      = false;
-        self.lid            = 0;
+        for (k in self) {
+            self[k] = null;
+        }
+    },
 
-        if (typeof returnResult == "object" && returnResult !== null) {
-            extend(self, returnResult, true, false);
+    /**
+     * @method
+     * @param {function} fn Callback function { @required }
+     * @param {object} context Function's "this" object
+     * @param {object} options See {@link class:Observable.on}
+     */
+    on: function(fn, context, options) {
+
+        if (!fn) {
+            return null;
+        }
+
+        context     = context || null;
+        options     = options || {};
+
+        var self        = this,
+            uni         = self.uni,
+            uniContext  = fn || context;
+
+        if (uniContext[uni] && !options.allowDupes) {
+            return null;
+        }
+
+        var id      = ++self.lid,
+            first   = options.first || false;
+
+        uniContext[uni]  = id;
+
+        var e = {
+            fn:         fn,
+            context:    context,
+            uniContext: uniContext,
+            id:         id,
+            async:      false,
+            called:     0, // how many times the function was triggered
+            limit:      0, // how many times the function is allowed to trigger
+            start:      1, // from which attempt it is allowed to trigger the function
+            count:      0, // how many attempts to trigger the function was made
+            append:     null, // append parameters
+            prepend:    null // prepend parameters
+        };
+
+        extend(e, options, true, false);
+
+        if (e.async === true) {
+            e.async = 1;
+        }
+
+        if (first) {
+            self.listeners.unshift(e);
         }
         else {
-            self.returnResult = returnResult === undf ? null : returnResult; // first|last|all
-            self.autoTrigger = autoTrigger;
-            self.triggerFilter = triggerFilter;
-            self.filterContext = filterContext;
+            self.listeners.push(e);
         }
-    };
 
+        self.map[id] = e;
 
-    extend(ObservableEvent.prototype, {
-
-        name: null,
-        listeners: null,
-        map: null,
-        hash: null,
-        uni: null,
-        suspended: false,
-        lid: null,
-        returnResult: null,
-        autoTrigger: null,
-        lastTrigger: null,
-        triggerFilter: null,
-        filterContext: null,
-
-        /**
-         * Get event name
-         * @method
-         * @returns {string}
-         */
-        getName: function() {
-            return this.name;
-        },
-
-        /**
-         * @method
-         */
-        destroy: function() {
-            var self        = this,
-                k;
-
-            for (k in self) {
-                self[k] = null;
-            }
-        },
-
-        /**
-         * @method
-         * @param {function} fn Callback function { @required }
-         * @param {object} context Function's "this" object
-         * @param {object} options See Observable's on()
-         */
-        on: function(fn, context, options) {
-
-            if (!fn) {
-                return null;
-            }
-
-            context     = context || null;
-            options     = options || {};
-
-            var self        = this,
-                uni         = self.uni,
-                uniContext  = context || fn;
-
-            if (uniContext[uni] && !options.allowDupes) {
-                return null;
-            }
-
-            var id      = ++self.lid,
-                first   = options.first || false;
-
-            uniContext[uni]  = id;
-
-
-            var e = {
-                fn:         fn,
-                context:    context,
-                uniContext: uniContext,
-                id:         id,
-                called:     0, // how many times the function was triggered
-                limit:      0, // how many times the function is allowed to trigger
-                start:      1, // from which attempt it is allowed to trigger the function
-                count:      0, // how many attempts to trigger the function was made
-                append:     null, // append parameters
-                prepend:    null // prepend parameters
+        if (self.autoTrigger && self.lastTrigger && !self.suspended) {
+            var prevFilter = self.triggerFilter;
+            self.triggerFilter = function(l){
+                if (l.id === id) {
+                    return prevFilter ? prevFilter(l) !== false : true;
+                }
+                return false;
             };
+            self.trigger.apply(self, self.lastTrigger);
+            self.triggerFilter = prevFilter;
+        }
 
-            extend(e, options, true, false);
+        return id;
+    },
 
-            if (first) {
-                self.listeners.unshift(e);
+    /**
+     * @method
+     * @param {function} fn Callback function { @required }
+     * @param {object} context Function's "this" object
+     * @param {object} options See {@link class:Observable.on}
+     */
+    once: function(fn, context, options) {
+
+        options = options || {};
+        options.limit = 1;
+
+        return this.on(fn, context, options);
+    },
+
+    /**
+     * @method
+     * @param {function} fn Callback function { @required }
+     * @param {object} context Callback context
+     */
+    un: function(fn, context) {
+
+        var self        = this,
+            inx         = -1,
+            uni         = self.uni,
+            listeners   = self.listeners,
+            id;
+
+        if (fn == parseInt(fn)) {
+            id      = parseInt(fn);
+        }
+        else {
+            context = context || fn;
+            id      = context[uni];
+        }
+
+        if (!id) {
+            return false;
+        }
+
+        for (var i = 0, len = listeners.length; i < len; i++) {
+            if (listeners[i].id === id) {
+                inx = i;
+                delete listeners[i].uniContext[uni];
+                break;
+            }
+        }
+
+        if (inx === -1) {
+            return false;
+        }
+
+        listeners.splice(inx, 1);
+        delete self.map[id];
+        return true;
+    },
+
+    /**
+     * @method hasListener
+     * @return bool
+     */
+
+    /**
+     * @method
+     * @param {function} fn Callback function { @required }
+     * @param {object} context Callback context
+     * @return boolean
+     */
+    hasListener: function(fn, context) {
+
+        var self    = this,
+            listeners   = self.listeners,
+            id;
+
+        if (fn) {
+
+            context = context || fn;
+
+            if (!isFunction(fn)) {
+                id  = parseInt(fn);
             }
             else {
-                self.listeners.push(e);
-            }
-
-            self.map[id] = e;
-
-            if (self.autoTrigger && self.lastTrigger && !self.suspended) {
-                var prevFilter = self.triggerFilter;
-                self.triggerFilter = function(l){
-                    if (l.id == id) {
-                        return prevFilter ? prevFilter(l) !== false : true;
-                    }
-                    return false;
-                };
-                self.trigger.apply(self, self.lastTrigger);
-                self.triggerFilter = prevFilter;
-            }
-
-            return id;
-        },
-
-        /**
-         * @method
-         * @param {function} fn Callback function { @required }
-         * @param {object} context Function's "this" object
-         * @param {object} options See Observable's on()
-         */
-        once: function(fn, context, options) {
-
-            options = options || {};
-            options.limit = 1;
-
-            return this.on(fn, context, options);
-        },
-
-        /**
-         * @method
-         * @param {function} fn Callback function { @required }
-         * @param {object} context Function's "this" object
-         */
-        un: function(fn, context) {
-
-            var self        = this,
-                inx         = -1,
-                uni         = self.uni,
-                listeners   = self.listeners,
-                id;
-
-            if (fn == parseInt(fn)) {
-                id      = fn;
-            }
-            else {
-                context = context || fn;
-                id      = context[uni];
+                id  = context[self.uni];
             }
 
             if (!id) {
@@ -4476,623 +4631,766 @@ var ObservableEvent = (function(){
             }
 
             for (var i = 0, len = listeners.length; i < len; i++) {
-                if (listeners[i].id == id) {
-                    inx = i;
-                    delete listeners[i].uniContext[uni];
-                    break;
+                if (listeners[i].id === id) {
+                    return true;
                 }
             }
 
-            if (inx == -1) {
-                return false;
-            }
-
-            listeners.splice(inx, 1);
-            delete self.map[id];
-            return true;
-        },
-
-        /**
-         * @method hasListener
-         * @return bool
-         */
-
-        /**
-         * @method
-         * @param {function} fn Callback function { @required }
-         * @param {object} context Function's "this" object
-         * @return bool
-         */
-        hasListener: function(fn, context) {
-
-            var self    = this,
-                listeners   = self.listeners,
-                id;
-
-            if (fn) {
-
-                context = context || fn;
-
-                if (!isFunction(fn)) {
-                    id  = fn;
-                }
-                else {
-                    id  = context[self.uni];
-                }
-
-                if (!id) {
-                    return false;
-                }
-
-                for (var i = 0, len = listeners.length; i < len; i++) {
-                    if (listeners[i].id == id) {
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-            else {
-                return listeners.length > 0;
-            }
-        },
-
-
-        /**
-         * @method
-         */
-        removeAllListeners: function() {
-            var self    = this,
-                listeners = self.listeners,
-                uni     = self.uni,
-                i, len;
-
-            for (i = 0, len = listeners.length; i < len; i++) {
-                delete listeners[i].uniContext[uni];
-            }
-            self.listeners   = [];
-            self.map         = {};
-        },
-
-        /**
-         * @method
-         */
-        suspend: function() {
-            this.suspended = true;
-        },
-
-        /**
-         * @method
-         */
-        resume: function() {
-            this.suspended = false;
-        },
-
-
-        _prepareArgs: function(l, triggerArgs) {
-            var args;
-
-            if (l.append || l.prepend) {
-                args    = slice.call(triggerArgs);
-                if (l.prepend) {
-                    args    = l.prepend.concat(args);
-                }
-                if (l.append) {
-                    args    = args.concat(l.append);
-                }
-            }
-            else {
-                args = triggerArgs;
-            }
-
-            return args;
-        },
-
-        /**
-         * @method
-         * @return {*}
-         */
-        trigger: function() {
-
-            var self            = this,
-                listeners       = self.listeners,
-                returnResult    = self.returnResult,
-                filter          = self.triggerFilter,
-                filterContext   = self.filterContext,
-                args;
-
-            if (self.suspended) {
-                return null;
-            }
-
-            if (self.autoTrigger) {
-                self.lastTrigger = slice.call(arguments);
-            }
-
-            if (listeners.length == 0) {
-                return null;
-            }
-
-            var ret     = returnResult == "all" || returnResult == "merge" ?
-                          [] : null,
-                q, l,
-                res;
-
-            if (returnResult == "first") {
-                q = [listeners[0]];
-            }
-            else {
-                // create a snapshot of listeners list
-                q = slice.call(listeners);
-            }
-
-            // now if during triggering someone unsubscribes
-            // we won't skip any listener due to shifted
-            // index
-            while (l = q.shift()) {
-
-                // listener may already have unsubscribed
-                if (!l || !self.map[l.id]) {
-                    continue;
-                }
-
-                args = self._prepareArgs(l, arguments);
-
-                if (filter && filter.call(filterContext, l, args, self) === false) {
-                    continue;
-                }
-
-                l.count++;
-
-                if (l.count < l.start) {
-                    continue;
-                }
-
-                res = l.fn.apply(l.context, args);
-
-                l.called++;
-
-                if (l.called == l.limit) {
-                    self.un(l.id);
-                }
-
-                if (returnResult == "all") {
-                    ret.push(res);
-                }
-                else if (returnResult == "merge" && res) {
-                    ret = ret.concat(res);
-                }
-                else if (returnResult == "first") {
-                    return res;
-                }
-                else if (returnResult == "nonempty" && res) {
-                    return res;
-                }
-                else if (returnResult == "last") {
-                    ret = res;
-                }
-                else if (returnResult == false && res === false) {
-                    return false;
-                }
-            }
-
-            if (returnResult) {
-                return ret;
-            }
+            return false;
         }
-    }, true, false);
-
-
-    return ObservableEvent;
-}());
-
-
-
-
-var Observable = (function(){
+        else {
+            return listeners.length > 0;
+        }
+    },
 
 
     /**
-     * @description A javascript event system implementing two patterns - observable and collector.
-     * @description Observable:
-     * @code examples/observable.js
-     *
-     * @description Collector:
-     * @code examples/collector.js
-     *
-     * @class Observable
-     * @version 1.1
-     * @author johann kuindji
-     * @link https://github.com/kuindji/metaphorjs-observable
+     * @method
      */
-    var Observable = function() {
+    removeAllListeners: function() {
+        var self    = this,
+            listeners = self.listeners,
+            uni     = self.uni,
+            i, len;
 
-        this.events = {};
+        for (i = 0, len = listeners.length; i < len; i++) {
+            delete listeners[i].uniContext[uni];
+        }
+        self.listeners   = [];
+        self.map         = {};
+    },
 
-    };
+    /**
+     * @method
+     */
+    suspend: function() {
+        this.suspended = true;
+    },
+
+    /**
+     * @method
+     */
+    resume: function() {
+        this.suspended = false;
+    },
 
 
-    extend(Observable.prototype, {
+    _prepareArgs: function(l, triggerArgs) {
+        var args;
 
-
-
-        /**
-        * You don't have to call this function unless you want to pass params other than event name.
-        * Normally, events are created automatically.
-        *
-        * @method createEvent
-        * @access public
-        * @param {string} name {
-        *       Event name
-        *       @required
-        * }
-        * @param {bool|string} returnResult {
-        *   false -- return first 'false' result and stop calling listeners after that<br>
-        *   "all" -- return all results as array<br>
-        *   "merge" -- merge all results into one array (each result must be array)<br>
-        *   "first" -- return result of the first handler (next listener will not be called)<br>
-        *   "last" -- return result of the last handler (all listeners will be called)<br>
-        * }
-        * @param {bool} autoTrigger {
-        *   once triggered, all future subscribers will be automatically called
-        *   with last trigger params
-        *   @code examples/autoTrigger.js
-        * }
-        * @param {function} triggerFilter {
-        *   This function will be called each time event is triggered. Return false to skip listener.
-        *   @code examples/triggerFilter.js
-        *   @param {object} listener This object contains all information about the listener, including
-        *       all data you provided in options while subscribing to the event.
-        *   @param {[]} arguments
-        *   @return {bool}
-        * }
-        * @return {ObservableEvent}
-        */
-
-        /**
-         * @method createEvent
-         * @param {string} name
-         * @param {object} options {
-         *  @type {string} returnResult
-         *  @param {bool} autoTrigger
-         *  @param {function} triggerFilter
-         * }
-         * @param {object} filterContext
-         * @returns {ObservableEvent}
-         */
-        createEvent: function(name, returnResult, autoTrigger, triggerFilter, filterContext) {
-            name = name.toLowerCase();
-            var events  = this.events;
-            if (!events[name]) {
-                events[name] = new ObservableEvent(name, returnResult, autoTrigger, triggerFilter, filterContext);
+        if (l.append || l.prepend) {
+            args    = slice.call(triggerArgs);
+            if (l.prepend) {
+                args    = l.prepend.concat(args);
             }
-            return events[name];
-        },
-
-        /**
-        * @method
-        * @access public
-        * @param {string} name Event name
-        * @return {ObservableEvent|undefined}
-        */
-        getEvent: function(name) {
-            name = name.toLowerCase();
-            return this.events[name];
-        },
-
-        /**
-        * Subscribe to an event or register collector function.
-        * @method
-        * @access public
-        * @param {string} name {
-        *       Event name
-        *       @required
-        * }
-        * @param {function} fn {
-        *       Callback function
-        *       @required
-        * }
-        * @param {object} context "this" object for the callback function
-        * @param {object} options {
-        *       You can pass any key-value pairs in this object. All of them will be passed to triggerFilter (if
-        *       you're using one).
-        *       @type {bool} first {
-        *           True to prepend to the list of handlers
-        *           @default false
-        *       }
-        *       @type {number} limit {
-        *           Call handler this number of times; 0 for unlimited
-        *           @default 0
-        *       }
-        *       @type {number} start {
-        *           Start calling handler after this number of calls. Starts from 1
-        *           @default 1
-        *       }
-         *      @type {[]} append Append parameters
-         *      @type {[]} prepend Prepend parameters
-         *      @type {bool} allowDupes allow the same handler twice
-        * }
-        */
-        on: function(name, fn, context, options) {
-            name = name.toLowerCase();
-            var events  = this.events;
-            if (!events[name]) {
-                events[name] = new ObservableEvent(name);
+            if (l.append) {
+                args    = args.concat(l.append);
             }
-            return events[name].on(fn, context, options);
-        },
+        }
+        else {
+            args = triggerArgs;
+        }
 
-        /**
-        * Same as {@link Observable.on}, but options.limit is forcefully set to 1.
-        * @method
-        * @access public
-        */
-        once: function(name, fn, context, options) {
-            options     = options || {};
-            options.limit = 1;
-            return this.on(name, fn, context, options);
-        },
+        return args;
+    },
 
+    /**
+     * @method
+     * @return {*}
+     */
+    trigger: function() {
 
-        /**
-        * Unsubscribe from an event
-        * @method
-        * @access public
-        * @param {string} name Event name
-        * @param {function} fn Event handler
-        * @param {object} context If you called on() with context you must call un() with the same context
-        */
-        un: function(name, fn, context) {
-            name = name.toLowerCase();
-            var events  = this.events;
-            if (!events[name]) {
-                return;
+        var self            = this,
+            listeners       = self.listeners,
+            rr              = self.returnResult,
+            filter          = self.triggerFilter,
+            filterContext   = self.filterContext,
+            expectPromises  = self.expectPromises,
+            results         = [],
+            prevPromise,
+            resPromise,
+            args, 
+            resolver;
+
+        if (self.suspended) {
+            return null;
+        }
+
+        if (self.autoTrigger) {
+            self.lastTrigger = slice.call(arguments);
+        }
+
+        if (listeners.length === 0) {
+            return null;
+        }
+
+        var ret     = rr === "all" || rr === "concat" ?
+                        [] : 
+                        (rr === "merge" ? {} : null),
+            q, l,
+            res;
+
+        if (rr === "first") {
+            q = [listeners[0]];
+        }
+        else {
+            // create a snapshot of listeners list
+            q = slice.call(listeners);
+        }
+
+        // now if during triggering someone unsubscribes
+        // we won't skip any listener due to shifted
+        // index
+        while (l = q.shift()) {
+
+            // listener may already have unsubscribed
+            if (!l || !self.map[l.id]) {
+                continue;
             }
-            events[name].un(fn, context);
-        },
 
-        /**
-         * @method hasListener
-         * @access public
-         * @return bool
-         */
+            args = self._prepareArgs(l, arguments);
 
-        /**
-        * @method hasListener
-        * @access public
-        * @param {string} name Event name { @required }
-        * @return bool
-        */
+            if (filter && filter.call(filterContext, l, args, self) === false) {
+                continue;
+            }
 
-        /**
-        * @method
-        * @access public
-        * @param {string} name Event name { @required }
-        * @param {function} fn Callback function { @required }
-        * @param {object} context Function's "this" object
-        * @return bool
-        */
-        hasListener: function(name, fn, context) {
-            var events = this.events;
+            if (l.filter && l.filter.apply(l.filterContext || l.context, args) === false) {
+                continue;
+            }
 
-            if (name) {
-                name = name.toLowerCase();
-                if (!events[name]) {
-                    return false;
-                }
-                return events[name].hasListener(fn, context);
+            l.count++;
+
+            if (l.count < l.start) {
+                continue;
+            }
+
+            if (l.async && !expectPromises) {
+                res = null;
+                async(l.fn, l.context, args, l.async);
             }
             else {
-                for (name in events) {
-                    if (events[name].hasListener()) {
+                if (expectPromises) {
+                    resolver = function(l, rr, args){
+                        return function(value) {
+
+                            if (rr === "pipe") {
+                                args[0] = value;
+                                args = self._prepareArgs(l, args);
+                            }
+                            
+                            return l.fn.apply(l.context, args);
+                        }
+                    }(l, rr, slice.call(arguments));
+
+                    if (prevPromise) {
+                        res = prevPromise.then(resolver);
+                    }
+                    else {
+                        res = l.fn.apply(l.context, args);
+                    }
+
+                    res.catch(function(err){
+                        console.log(err);
+                    });
+                }
+                else {
+                    res = l.fn.apply(l.context, args);
+                }
+            }
+
+            l.called++;
+
+            if (l.called === l.limit) {
+                self.un(l.id);
+            }
+
+            // This rule is valid in all cases sync and async.
+            // It either returns first value or first promise.
+            if (rr === "first") {
+                return res;
+            }
+        
+            // Promise branch
+            if (expectPromises) {
+            
+                // we collect all results for further processing/resolving
+                results.push(res);
+
+                if (rr === "pipe" && res) {
+                    prevPromise = res;
+                }
+            }
+            else {
+                if (rr !== null) {
+                    if (rr === "all") {
+                        ret.push(res);
+                    }
+                    else if (rr === "concat" && res) {
+                        ret = ret.concat(res);
+                    }
+                    else if (rr === "merge") {
+                        extend(ret, res, true, false);
+                    }
+                    else if (rr === "nonempty" && res) {
+                        return res;
+                    }
+                    else if (rr === "pipe") {
+                        ret = res;
+                        arguments[0] = res;
+                    }
+                    else if (rr === "last") {
+                        ret = res;
+                    }
+                    else if (rr === false && res === false) {
+                        return false;
+                    }
+                    else if (rr === true && res === true) {
                         return true;
                     }
                 }
+            }
+        }
+
+        if (expectPromises) {
+            resPromise = Promise.all(results);
+            if (self.resolvePromises && rr !== null && rr !== "all") {
+                resPromise = resPromise.then(function(values){
+                    var i, l = values.length, res;
+                    for(i = 0; i < l; i++) {
+                        res = values[i];
+                        if (rr === "concat" && res) {
+                            ret = ret.concat(res);
+                        }
+                        else if (rr === "merge") {
+                            extend(ret, res, true, false);
+                        }
+                        else if (rr === "nonempty" && res) {
+                            return res;
+                        }
+                        else if (rr === false && res === false) {
+                            return false;
+                        }
+                        else if (rr === true && res === true) {
+                            return true;
+                        }
+                    }
+                    return ret;
+                });
+            }
+            return resPromise;
+        }
+        else return ret;
+    }
+}, true, false);
+
+
+
+
+
+
+
+
+/**
+ * @description A javascript event system implementing two patterns - observable and collector.
+ * @description Observable:
+ * @code examples/observable.js
+ *
+ * @description Collector:
+ * @code examples/collector.js
+ *
+ * @class Observable
+ * @version 1.2
+ * @author Ivan Kuindzhi
+ * @link https://github.com/kuindji/metaphorjs-observable
+ */
+var Observable = function() {
+
+    this.events = {};
+
+};
+
+
+extend(Observable.prototype, {
+
+
+
+    /**
+    * You don't have to call this function unless you want to pass params other than event name.
+    * Normally, events are created automatically.
+    *
+    * @method createEvent
+    * @access public
+    * @param {string} name {
+    *       Event name
+    *       @required
+    * }
+    * @param {bool|string} returnResult {
+    *   false -- return first 'false' result and stop calling listeners after that<br>
+    *   true -- return first 'true' result and stop calling listeners after that<br>
+    *   "all" -- return all results as array<br>
+    *   "concat" -- merge all results into one array (each result must be array)<br>
+    *   "merge" -- merge all results into one object (each result much be object)<br>
+    *   "pipe" -- pass return value of previous listener to the next listener.
+    *             Only first trigger parameter is being replaced with return value,
+    *             others stay as is.<br>
+    *   "first" -- return result of the first handler (next listener will not be called)<br>
+    *   "nonempty" -- return first nonempty result<br>
+    *   "last" -- return result of the last handler (all listeners will be called)<br>
+    * }
+    * @param {bool} autoTrigger {
+    *   once triggered, all future subscribers will be automatically called
+    *   with last trigger params
+    *   @code examples/autoTrigger.js
+    * }
+    * @param {function} triggerFilter {
+    *   This function will be called each time event is triggered. Return false to skip listener.
+    *   @code examples/triggerFilter.js
+    *   @param {object} listener This object contains all information about the listener, including
+    *       all data you provided in options while subscribing to the event.
+    *   @param {[]} arguments
+    *   @return {bool}
+    * }
+    * @param {object} filterContext triggerFilter's context
+    * @return {ObservableEvent}
+    */
+
+    /**
+     * @method createEvent
+     * @param {string} name
+     * @param {object} options {
+     *  Options object or returnResult value. All options are optional.
+     *  @type {string|bool} returnResult
+     *  @type {bool} autoTrigger
+     *  @type {function} triggerFilter
+     *  @type {object} filterContext
+     *  @type {bool} expectPromises
+     *  @type {bool} resolvePromises
+     * }
+     * @returns {ObservableEvent}
+     */
+    createEvent: function(name, options) {
+        name = name.toLowerCase();
+        var events  = this.events;
+        if (!events[name]) {
+            events[name] = new ObservableEvent(name, options);
+        }
+        return events[name];
+    },
+
+    /**
+    * @method
+    * @access public
+    * @param {string} name Event name
+    * @return {ObservableEvent|undefined}
+    */
+    getEvent: function(name) {
+        name = name.toLowerCase();
+        return this.events[name];
+    },
+
+    /**
+    * Subscribe to an event or register collector function.
+    * @method
+    * @access public
+    * @param {string} name {
+    *       Event name. Use '*' to subscribe to all events.
+    *       @required
+    * }
+    * @param {function} fn {
+    *       Callback function
+    *       @required
+    * }
+    * @param {object} context "this" object for the callback function
+    * @param {object} options {
+    *       You can pass any key-value pairs in this object. All of them will be passed 
+    *       to triggerFilter (if you're using one).
+    *       @type {bool} first {
+    *           True to prepend to the list of handlers
+    *           @default false
+    *       }
+    *       @type {number} limit {
+    *           Call handler this number of times; 0 for unlimited
+    *           @default 0
+    *       }
+    *       @type {number} start {
+    *           Start calling handler after this number of calls. Starts from 1
+    *           @default 1
+    *       }
+        *      @type {[]} append Append parameters
+        *      @type {[]} prepend Prepend parameters
+        *      @type {bool} allowDupes allow the same handler twice
+        *      @type {bool|int} async run event asynchronously. If event was
+        *                      created with <code>expectPromises: true</code>, 
+        *                      this option is ignored.
+    * }
+    */
+    on: function(name, fn, context, options) {
+        name = name.toLowerCase();
+        var events  = this.events;
+        if (!events[name]) {
+            events[name] = new ObservableEvent(name);
+        }
+        return events[name].on(fn, context, options);
+    },
+
+    /**
+    * Same as {@link class:Observable.on}, but options.limit is forcefully set to 1.
+    * @method
+    * @access public
+    */
+    once: function(name, fn, context, options) {
+        options     = options || {};
+        options.limit = 1;
+        return this.on(name, fn, context, options);
+    },
+
+    /**
+    * Unsubscribe from an event
+    * @method
+    * @access public
+    * @param {string} name Event name
+    * @param {function} fn Event handler
+    * @param {object} context If you called on() with context you must 
+    *                         call un() with the same context
+    */
+    un: function(name, fn, context) {
+        name = name.toLowerCase();
+        var events  = this.events;
+        if (!events[name]) {
+            return;
+        }
+        events[name].un(fn, context);
+    },
+
+    /**
+     * Relay all events of <code>eventSource</code> through this observable.
+     * @method
+     * @access public
+     * @param {object} eventSource
+     * @param {string} eventName
+     */
+    relayEvent: function(eventSource, eventName) {
+        eventSource.on(eventName, this.trigger, this, {
+            prepend: eventName === "*" ? null : [eventName]
+        });
+    },
+
+    /**
+     * Stop relaying events of <code>eventSource</code>
+     * @method
+     * @access public
+     * @param {object} eventSource
+     * @param {string} eventName
+     */
+    unrelayEvent: function(eventSource, eventName) {
+        eventSource.un(eventName, this.trigger, this);
+    },
+
+    /**
+     * @method hasListener
+     * @access public
+     * @return bool
+     */
+
+    /**
+    * @method hasListener
+    * @access public
+    * @param {string} name Event name { @required }
+    * @return bool
+    */
+
+    /**
+    * @method
+    * @access public
+    * @param {string} name Event name { @required }
+    * @param {function} fn Callback function { @required }
+    * @param {object} context Function's "this" object
+    * @return bool
+    */
+    hasListener: function(name, fn, context) {
+        var events = this.events;
+
+        if (name) {
+            name = name.toLowerCase();
+            if (!events[name]) {
                 return false;
             }
-        },
+            return fn ? events[name].hasListener(fn, context) : true;
+        }
+        else {
+            for (name in events) {
+                if (events[name].hasListener()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    },
+
+    /**
+    * @method
+    * @access public
+    * @param {string} name Event name { @required }
+    * @return bool
+    */
+    hasEvent: function(name) {
+        return !!this.events[name];
+    },
 
 
-        /**
-        * Remove all listeners from all events
-        * @method removeAllListeners
-        * @access public
-        */
+    /**
+    * Remove all listeners from all events
+    * @method removeAllListeners
+    * @access public
+    */
 
-        /**
-        * Remove all listeners from specific event
-        * @method
-        * @access public
-        * @param {string} name Event name { @required }
-        */
-        removeAllListeners: function(name) {
-            var events  = this.events;
+    /**
+    * Remove all listeners from specific event
+    * @method
+    * @access public
+    * @param {string} name Event name { @required }
+    */
+    removeAllListeners: function(name) {
+        var events  = this.events;
+        if (name) {
             if (!events[name]) {
                 return;
             }
             events[name].removeAllListeners();
-        },
-
-        /**
-        * Trigger an event -- call all listeners.
-        * @method
-        * @access public
-        * @param {string} name Event name { @required }
-        * @param {*} ... As many other params as needed
-        * @return mixed
-        */
-        trigger: function() {
-
-            var name = arguments[0],
-                events  = this.events;
-
-            name = name.toLowerCase();
-
-            if (!events[name]) {
-                return null;
-            }
-
-            var e = events[name];
-            return e.trigger.apply(e, slice.call(arguments, 1));
-        },
-
-        /**
-        * Suspend an event. Suspended event will not call any listeners on trigger().
-        * @method
-        * @access public
-        * @param {string} name Event name
-        */
-        suspendEvent: function(name) {
-            name = name.toLowerCase();
-            var events  = this.events;
-            if (!events[name]) {
-                return;
-            }
-            events[name].suspend();
-        },
-
-        /**
-        * @method
-        * @access public
-        */
-        suspendAllEvents: function() {
-            var events  = this.events;
-            for (var name in events) {
-                events[name].suspend();
-            }
-        },
-
-        /**
-        * Resume suspended event.
-        * @method
-        * @access public
-        * @param {string} name Event name
-        */
-        resumeEvent: function(name) {
-            name = name.toLowerCase();
-            var events  = this.events;
-            if (!events[name]) {
-                return;
-            }
-            events[name].resume();
-        },
-
-        /**
-        * @method
-        * @access public
-        */
-        resumeAllEvents: function() {
-            var events  = this.events;
-            for (var name in events) {
-                events[name].resume();
-            }
-        },
-
-        /**
-         * @method
-         * @access public
-         * @param {string} name Event name
-         */
-        destroyEvent: function(name) {
-            var events  = this.events;
-            if (events[name]) {
-                events[name].removeAllListeners();
-                events[name].destroy();
-                delete events[name];
-            }
-        },
-
-
-        /**
-        * Destroy observable
-        * @method
-        * @md-not-inheritable
-        * @access public
-        */
-        destroy: function() {
-            var self    = this,
-                events  = self.events;
-
-            for (var i in events) {
-                self.destroyEvent(i);
-            }
-
-            for (i in self) {
-                self[i] = null;
-            }
-        },
-
-        /**
-        * Although all methods are public there is getApi() method that allows you
-        * extending your own objects without overriding "destroy" (which you probably have)
-        * @code examples/api.js
-        * @method
-        * @md-not-inheritable
-        * @returns object
-        */
-        getApi: function() {
-
-            var self    = this;
-
-            if (!self.api) {
-
-                var methods = [
-                        "createEvent", "getEvent", "on", "un", "once", "hasListener", "removeAllListeners",
-                        "trigger", "suspendEvent", "suspendAllEvents", "resumeEvent",
-                        "resumeAllEvents", "destroyEvent"
-                    ],
-                    api = {},
-                    name;
-
-                for(var i =- 1, l = methods.length;
-                        ++i < l;
-                        name = methods[i],
-                        api[name] = bind(self[name], self)){}
-
-                self.api = api;
-            }
-
-            return self.api;
-
         }
-    }, true, false);
+        else {
+            for (name in events) {
+                events[name].removeAllListeners();
+            }
+        }
+    },
+
+    /**
+    * Trigger an event -- call all listeners. Also triggers '*' event.
+    * @method
+    * @access public
+    * @param {string} name Event name { @required }
+    * @param {*} ... As many other params as needed
+    * @return mixed
+    */
+    trigger: function() {
+
+        var name = arguments[0],
+            events  = this.events,
+            e,
+            res = null;
+
+        name = name.toLowerCase();
+
+        if (events[name]) {
+            e = events[name];
+            res = e.trigger.apply(e, slice.call(arguments, 1));
+        }
+        
+        // trigger * event with current event name
+        // as first argument
+        if (e = events["*"]) {
+            e.trigger.apply(e, arguments);
+        }
+        
+        return res;
+    },
+
+    /**
+    * Suspend an event. Suspended event will not call any listeners on trigger().
+    * @method
+    * @access public
+    * @param {string} name Event name
+    */
+    suspendEvent: function(name) {
+        name = name.toLowerCase();
+        var events  = this.events;
+        if (!events[name]) {
+            return;
+        }
+        events[name].suspend();
+    },
+
+    /**
+    * @method
+    * @access public
+    */
+    suspendAllEvents: function() {
+        var events  = this.events;
+        for (var name in events) {
+            events[name].suspend();
+        }
+    },
+
+    /**
+    * Resume suspended event.
+    * @method
+    * @access public
+    * @param {string} name Event name
+    */
+    resumeEvent: function(name) {
+        name = name.toLowerCase();
+        var events  = this.events;
+        if (!events[name]) {
+            return;
+        }
+        events[name].resume();
+    },
+
+    /**
+    * @method
+    * @access public
+    */
+    resumeAllEvents: function() {
+        var events  = this.events;
+        for (var name in events) {
+            events[name].resume();
+        }
+    },
+
+    /**
+     * @method
+     * @access public
+     * @param {string} name Event name
+     */
+    destroyEvent: function(name) {
+        var events  = this.events;
+        if (events[name]) {
+            events[name].removeAllListeners();
+            events[name].destroy();
+            delete events[name];
+        }
+    },
 
 
-    return Observable;
-}());
+    /**
+    * Destroy observable
+    * @method
+    * @md-not-inheritable
+    * @access public
+    */
+    destroy: function() {
+        var self    = this,
+            events  = self.events;
+
+        for (var i in events) {
+            self.destroyEvent(i);
+        }
+
+        for (i in self) {
+            self[i] = null;
+        }
+    },
+
+    /**
+    * Although all methods are public there is getApi() method that allows you
+    * extending your own objects without overriding "destroy" (which you probably have)
+    * @code examples/api.js
+    * @method
+    * @md-not-inheritable
+    * @returns object
+    */
+    getApi: function() {
+
+        var self    = this;
+
+        if (!self.api) {
+
+            var methods = [
+                    "createEvent", "getEvent", "on", "un", "once", "hasListener", "removeAllListeners",
+                    "trigger", "suspendEvent", "suspendAllEvents", "resumeEvent",
+                    "resumeAllEvents", "destroyEvent",
+                    "relayEvent", "unrelayEvent"
+                ],
+                api = {},
+                name;
+
+            for(var i =- 1, l = methods.length;
+                    ++i < l;
+                    name = methods[i],
+                    api[name] = bind(self[name], self)){}
+
+            self.api = api;
+        }
+
+        return self.api;
+
+    }
+}, true, false);
+
+
+
 
 
 
 /**
  * @mixin Observable
+ * @description Mixin adds observable features to the host object.
+ *              It adds 'callback' option to the host config. See $beforeInit.
+ *              Mixin is designed for MetaphorJs class system.
+ * @code examples/mixin.js
  */
 ns.register("mixin.Observable", {
 
     /**
+     * @private
      * @type {Observable}
+     * @description You can use this instance in your $init function
      */
     $$observable: null,
+
+    /**
+     * @private
+     * @type {object}
+     */
     $$callbackContext: null,
 
+    /**
+     * @protected
+     * @type {object} {
+     *      Override this to define event properties. 
+     *      Object's key is event name, value - either returnResult or 
+     *      options object. See {@link class:Observable.createEvent}
+     * }
+     */
+    $$events: null,
+
+    /**
+     * @method
+     * @private
+     * @param {object} cfg {
+     *      This is a config that was passed to the host object's constructor.
+     *      It is being passed to mixin's $beforeInit automatically.
+     *      @type {object} callback {
+     *          Here, except for 'context', '$context' and 'scope', 
+     *          keys are event names and values are listeners. 
+     *          @type {object} context All given listeners context
+     *          @type {object} scope The same
+     *      }
+     * }
+     */
     $beforeInit: function(cfg) {
-
         var self = this;
-
         self.$$observable = new Observable;
-
         self.$initObservable(cfg);
     },
 
+    /**
+     * @method
+     * @private
+     * @ignore
+     * @param {object} cfg
+     */
     $initObservable: function(cfg) {
 
         var self    = this,
-            obs     = self.$$observable;
+            obs     = self.$$observable,
+            i;
 
         if (cfg && cfg.callback) {
             var ls = cfg.callback,
                 context = ls.context || ls.scope || ls.$context,
-                events = extend({}, self.$$events, ls.$events, true, false),
-                i;
+                events = extend({}, self.$$events, ls.$events, true, false);
 
             for (i in events) {
                 obs.createEvent(i, events[i]);
@@ -5113,32 +5411,63 @@ ns.register("mixin.Observable", {
                 self.$$callbackContext = context;
             }
         }
+        else if (self.$$events) {
+            for (i in self.$$events) {
+                obs.createEvent(i, self.$$events[i]);
+            }
+        }
     },
 
+    /**
+     * @method
+     * @see {@link class:Observable.on}
+     */
     on: function() {
         var o = this.$$observable;
-        return o.on.apply(o, arguments);
+        return o ? o.on.apply(o, arguments) : null;
     },
 
+    /**
+     * @method
+     * @see {@link class:Observable.un}
+     */
     un: function() {
         var o = this.$$observable;
-        return o.un.apply(o, arguments);
+        return o ? o.un.apply(o, arguments) : null;
     },
 
+    /**
+     * @method
+     * @see {@link class:Observable.once}
+     */
     once: function() {
         var o = this.$$observable;
-        return o.once.apply(o, arguments);
+        return o ? o.once.apply(o, arguments) : null;
     },
 
+    /**
+     * @method
+     * @see {@link class:Observable.trigger}
+     */
     trigger: function() {
         var o = this.$$observable;
-        return o.trigger.apply(o, arguments);
+        return o ? o.trigger.apply(o, arguments) : null;
     },
 
+    /**
+     * @method
+     * @private
+     * @ignore
+     */
     $beforeDestroy: function() {
         this.$$observable.trigger("before-destroy", this);
     },
 
+    /**
+     * @method
+     * @private
+     * @ignore
+     */
     $afterDestroy: function() {
         var self = this;
         self.$$observable.trigger("destroy", self);
@@ -6266,45 +6595,6 @@ function isPrimitive(value) {
     var vt = varType(value);
     return vt < 3 && vt > -1;
 };
-// https://gist.github.com/jdalton/5e34d890105aca44399f
-
-var isNative = function() {
-
-    // Used to resolve the internal `[[Class]]` of values.
-    var toString = Object.prototype.toString;
-
-    // Used to resolve the decompiled source of functions.
-    var fnToString = Function.prototype.toString;
-
-    // Used to detect host constructors (Safari > 4; really typed array specific).
-    var reHostCtor = /^\[object .+?Constructor\]$/;
-
-    // Compile a regexp using a common native method as a template.
-    // We chose `Object#toString` because there's a good chance it is not being mucked with.
-    var reNative = RegExp('^' +
-                          // Coerce `Object#toString` to a string.
-                          String(toString)
-                              // Escape any special regexp characters.
-                              .replace(/[.*+?^${}()|[\]\/\\]/g, '\\$&')
-                              // Replace mentions of `toString` with `.*?` to keep the template generic.
-                              // Replace thing like `for ...` to support environments, like Rhino, which add extra
-                              // info such as method arity.
-                              .replace(/toString|(function).*?(?=\\\()| for .+?(?=\\\])/g, '$1.*?') + '$'
-    );
-
-    return function isNative(value) {
-        var type = typeof value;
-        return type == 'function'
-            // Use `Function#toString` to bypass the value's own `toString` method
-            // and avoid being faked out.
-            ? (!('prototype' in value) || reNative.test(fnToString.call(value)))
-            // Fallback to a host object check because some environments will represent
-            // things like typed arrays as DOM methods which may not conform to the
-            // normal native pattern.
-            : (value && type == 'object' && reHostCtor.test(toString.call(value))) || false;
-    };
-
-}();
 
 
 
@@ -6402,98 +6692,39 @@ function levenshteinArray(from, to) {
 
 var functionFactory = function() {
 
-    var REG_REPLACE_EXPR    = /(^|[^a-z0-9_$\]\)'"])(\.)([^0-9])/ig,
+    var REG_REPLACE_EXPR    = /((^|[^a-z0-9_$\]\)'"])|(this))(\.)([^0-9])/ig,
+        REG_REPLACER        = "$2____.$5",
 
         f               = Function,
         fnBodyStart     = 'try {',
-        //getterBodyEnd   = ';} catch (thrownError) { return $$interceptor(thrownError, $$itself, ____); }',
-        //setterBodyEnd   = ';} catch (thrownError) { return $$interceptor(thrownError, $$itself, ____, $$$$); }',
         getterBodyEnd   = ';} catch (thrownError) { return undefined; }',
         setterBodyEnd   = ';} catch (thrownError) { return undefined; }',
-
-
-        /*interceptor     = function(thrownError, func, scope, value) {
-
-            while (scope && !scope.$isRoot) {
-
-                scope = scope.$parent;
-
-                if (scope) {
-
-                    try {
-                        if (arguments.length == 4) {
-                            return func.call(null, scope, value, emptyFn, func);
-                        }
-                        else {
-                            return func.call(null, scope, emptyFn, func);
-                        }
-                    }
-                    catch (newError) {}
-                }
-            }
-
-            if (thrownError !== null) {
-                error(thrownError);
-            }
-
-            return undf;
-        },*/
-
-        isFailed        = function(val) {
-            return val === undf || (typeof val == "number" && isNaN(val));
-        },
-
-        wrapFunc        = function(func, returnsValue) {
-            return function(scope) {
-                var args = slice.call(arguments),
-                    val;
-
-                //args.push(interceptor);
-                args.push(null);
-                args.push(func);
-
-                val = func.apply(null, args);
-                return isFailed(val) ? undf : val;
-
-                /*if (returnsValue) {
-                    val = func.apply(null, args);
-                    while (isFailed(val) && !scope.$isRoot) {
-                        scope = scope.$parent;
-                        args[0] = scope;
-                        val = func.apply(null, args);
-                    }
-                    return val;
-                }
-                else {
-                    return func.apply(null, args);
-                }*/
-
-                /*if (returnsValue && isFailed(val)) {//) {
-                    args = slice.call(arguments);
-                    args.unshift(func);
-                    args.unshift(null);
-                    return interceptor.apply(null, args);
-                }
-                else {
-                    return val;
-                }*/
-            };
-        },
 
         getterCache     = {},
         getterCacheCnt  = 0,
 
-        createGetter    = function createGetter(expr) {
+        createGetter    = function createGetter(expr, returnAsCode) {
 
             try {
-                if (!getterCache[expr]) {
+                if (!getterCache[expr] || returnAsCode) {
                     getterCacheCnt++;
-                    return getterCache[expr] = wrapFunc(new f(
-                        '____',
-                        '$$interceptor',
-                        '$$itself',
-                        "".concat(fnBodyStart, 'return ', expr.replace(REG_REPLACE_EXPR, '$1____.$3'), getterBodyEnd)
-                    ), true);
+
+                    var body = "".concat(
+                        fnBodyStart,
+                        'return ',
+                        expr.replace(REG_REPLACE_EXPR, REG_REPLACER),
+                        getterBodyEnd
+                    );
+
+                    if (returnAsCode) {
+                        return "function(____) {" + body + "}";
+                    }
+                    else {
+                        return getterCache[expr] = new f(
+                            '____',
+                            body
+                        );
+                    }
                 }
                 return getterCache[expr];
             }
@@ -6506,18 +6737,23 @@ var functionFactory = function() {
         setterCache     = {},
         setterCacheCnt  = 0,
 
-        createSetter    = function createSetter(expr) {
+        createSetter    = function createSetter(expr, returnAsCode) {
             try {
-                if (!setterCache[expr]) {
+                if (!setterCache[expr] || returnAsCode) {
                     setterCacheCnt++;
-                    var code = expr.replace(REG_REPLACE_EXPR, '$1____.$3');
-                    return setterCache[expr] = wrapFunc(new f(
-                        '____',
-                        '$$$$',
-                        '$$interceptor',
-                        '$$itself',
-                        "".concat(fnBodyStart, code, ' = $$$$', setterBodyEnd)
-                    ));
+                    var code = expr.replace(REG_REPLACE_EXPR, REG_REPLACER),
+                        body = "".concat(fnBodyStart, code, ' = $$$$', setterBodyEnd);
+
+                    if (returnAsCode) {
+                        return "function(____, $$$$) {" + body + "}";
+                    }
+                    else {
+                        return setterCache[expr] = new f(
+                            '____',
+                            '$$$$',
+                            body
+                        );
+                    }
                 }
                 return setterCache[expr];
             }
@@ -6530,16 +6766,26 @@ var functionFactory = function() {
         funcCache       = {},
         funcCacheCnt    = 0,
 
-        createFunc      = function createFunc(expr) {
+        createFunc      = function createFunc(expr, returnAsCode) {
             try {
-                if (!funcCache[expr]) {
+                if (!funcCache[expr] || returnAsCode) {
                     funcCacheCnt++;
-                    return funcCache[expr] = wrapFunc(new f(
-                        '____',
-                        '$$interceptor',
-                        '$$itself',
-                        "".concat(fnBodyStart, expr.replace(REG_REPLACE_EXPR, '$1____.$3'), getterBodyEnd)
-                    ));
+
+                    var body = "".concat(
+                        fnBodyStart,
+                        expr.replace(REG_REPLACE_EXPR, REG_REPLACER),
+                        getterBodyEnd
+                    );
+
+                    if (returnAsCode) {
+                        return "function(____) {" + body + "}";
+                    }
+                    else {
+                        return funcCache[expr] = new f(
+                            '____',
+                            body
+                        );
+                    }
                 }
                 return funcCache[expr];
             }
@@ -6579,9 +6825,7 @@ var createSetter = functionFactory.createSetter;
 
 var Watchable = function(){
 
-    var nativeObserver  = Object.observe && isNative(Object.observe),
-
-        isStatic    = function(val) {
+    var isStatic    = function(val) {
 
             if (!isString(val)) {
                 return true;
@@ -6590,8 +6834,8 @@ var Watchable = function(){
             var first   = val.substr(0, 1),
                 last    = val.length - 1;
 
-            if (first == '"' || first == "'") {
-                if (val.indexOf(first, 1) == last) {
+            if (first === '"' || first === "'") {
+                if (val.indexOf(first, 1) === last) {
                     return val.substring(1, last);
                 }
             }
@@ -6622,13 +6866,13 @@ var Watchable = function(){
 
                 action = prs[prsi];
 
-                if (action == 'D') {
+                if (action === 'D') {
                     continue;
                 }
 
                 k = getKey(a2[a2i]);
 
-                if (k != undf && used[k] !== true && (index = map1[k]) !== undf) {
+                if (k !== undf && used[k] !== true && (index = map1[k]) !== undf) {
                     newPrs.push(index);
                     used[k] = true;
                 }
@@ -6653,57 +6897,51 @@ var Watchable = function(){
      * @param {string} code property name or custom code
      * @param {function} fn optional listener
      * @param {object} fnScope optional listener's "this" object
-     * @param {*} userData optional data to pass to the listener
-     * @param {Namespace} namespace optional namespace to get filters and pipes from
+     *  @subparam {*} userData optional data to pass to the listener
+     *  @subparam {function} filterLookup
+     *  @subparam {*} mock do not calculate real values, use mock instead
+     *  @subparam {function} predefined getter fn
+     * @param {object} opt
      * @constructor
      */
-    var Watchable   = function(dataObj, code, fn, fnScope, userData, namespace) {
+    var Watchable   = function(dataObj, code, fn, fnScope, opt) {
 
         if (!observable) {
             observable  = new Observable;
         }
 
+        opt = opt || {};
+
         var self    = this,
             id      = nextUid(),
-            type,
-            useObserver = false;
+            type;
 
-        if (namespace) {
-            self.namespace = namespace;
-            self.nsGet = namespace.get;
+        if (opt.filterLookup) {
+            self.filterLookup = opt.filterLookup;
         }
 
+        self.mock = opt.mock;
         self.origCode = code;
 
-        if (!isString(code)) {
-            fnScope = fn;
-            fn      = code;
-            code    = null;
-            type    = "object";
+        if (opt.mock && code.indexOf(".") === -1) {
+            type = "attr";
         }
-        if (isString(dataObj)) {
-            fnScope = fn;
-            fn      = code;
-            code    = dataObj;
-            dataObj = null;
-        }
-
-        if (code && dataObj) {
+        else if (code && dataObj) {
             type    = dataObj.hasOwnProperty(code) ? "attr" : "expr";
         }
-        if (code && !dataObj) {
-            type    = "expr";
+        else if (code && !dataObj) {
+            type = "expr";
         }
 
 
         if (fn) {
             observable.on(id, fn, fnScope || this, {
-                append: [userData],
+                append: [opt.userData],
                 allowDupes: true
             });
         }
 
-        if (type == "expr") {
+        if (type === "expr") {
             code        = self._parsePipes(code, dataObj, true);
             code        = self._parsePipes(code, dataObj, false);
 
@@ -6717,31 +6955,17 @@ var Watchable = function(){
             }
         }
 
-        self.userData   = userData;
+        self.userData   = opt.userData;
         self.code       = code;
         self.id         = id;
         self.type       = type;
         self.obj        = dataObj;
 
-        if (type == "expr") {
-            self.getterFn   = createGetter(code);
+        if (type === "expr") {
+            self.getterFn   = opt.getterFn || createGetter(code);
         }
 
-        // Object.observe() doesn't work with expressions and may confuse more than help.
-        // so the only thing it does on change, it sets changed flag
-        // so that on the next digest cycle there wouldn't be any need
-        // to compare values.
-
-        // upd: still, the change event happens _after_ digest cycle
-        // so lets think some more. :(
-
-        /*if (type == "attr" && nativeObserver && !self.pipes && !self.inputPipes) {
-            self.curr   = self._getValue();
-            useObserver = isPrimitive(self.curr);
-        }
-        useObserver = false;*/
-
-        if (type != "static" || self.pipes) {
+        if (type !== "static" || self.pipes) {
             self.curr = self.curr || self._getValue();
             self.currCopy = isPrimitive(self.curr) ? self.curr : copy(self.curr);
         }
@@ -6749,17 +6973,15 @@ var Watchable = function(){
             self.check = returnFalse;
             self.curr = self.prev = self.staticValue;
         }
-
-        /*if (useObserver) {
-            self.obsrvDelegate = bind(self.onObserverChange, self);
-            Object.observe(self.obj, self.obsrvDelegate);
-        }*/
     };
 
     extend(Watchable.prototype, {
 
-        namespace: null,
-        nsGet: null,
+        //namespace: null,
+        //nsGet: null,
+
+        filterLookup: null,
+
         staticValue: null,
         origCode: null,
         code: null,
@@ -6772,6 +6994,7 @@ var Watchable = function(){
         curr: null,
         currCopy: null,
         prev: null,
+        unfilteredCopy: null,
         unfiltered: null,
         pipes: null,
         inputPipes: null,
@@ -6779,7 +7002,30 @@ var Watchable = function(){
         userData: null,
         obsrvDelegate: null,
         obsrvChanged: false,
+        forcePipes: false,
 
+        mock: false,
+
+        // means that pipes always return the same output given the same input.
+        // if you want to mark pipe as undeterministic - put ? before it
+        // {{ .somevalue | ?pipe }}
+        // then value will be passed through all pipes on each check.
+        deterministic: true,
+
+        getConfig: function() {
+            var getterFn = null;
+            if (this.type === "expr") {
+                getterFn   = createGetter(this.code, true);
+            }
+            return {
+                type: this.type,
+                code: this.origCode,
+                withoutPipes: this.code,
+                getter: getterFn,
+                hasPipes: this.pipes !== null,
+                hasInputPipes: this.inputPipes !== null
+            }
+        },
 
         _indexArrayItems: function(a) {
 
@@ -6804,7 +7050,7 @@ var Watchable = function(){
                 propName    = input ? "inputPipes" : "pipes",
                 cb          = input ? self.onInputParamChange : self.onPipeParamChange;
 
-            if (text.indexOf(separator) == -1) {
+            if (text.indexOf(separator) === -1) {
                 return text;
             }
 
@@ -6816,7 +7062,7 @@ var Watchable = function(){
 
             for(i = 0, l = parts.length; i < l; i++) {
                 pipe = split(trim(parts[i]), ':');
-                self._addPipe(pipes, pipe, dataObj, cb);
+                self._addPipe(pipes, pipe, dataObj, cb, false);
             }
 
             if (pipes.length) {
@@ -6826,41 +7072,130 @@ var Watchable = function(){
             return trim(ret);
         },
 
-        _addPipe: function(pipes, pipe, dataObj, onParamChange) {
+        prependInuptPipe: function() {
+            this.inputPipes = this.inputPipes || [];
+            this._addPipe(
+                this.inputPipes,
+                toArray(arguments),
+                this.obj,
+                this.onInputParamChange,
+                true
+            );
+        },
+        addInuptPipe: function() {
+            this.inputPipes = this.inputPipes || [];
+            this._addPipe(
+                this.inputPipes,
+                toArray(arguments),
+                this.obj,
+                this.onInputParamChange,
+                false
+            );
+        },
+
+        addPipe: function() {
+            this.pipes = this.pipes || [];
+            this._addPipe(
+                this.pipes,
+                toArray(arguments),
+                this.obj,
+                this.onPipeParamChange,
+                false
+            );
+        },
+        prependPipe: function() {
+            this.pipes = this.pipes || [];
+            this._addPipe(
+                this.pipes,
+                toArray(arguments),
+                this.obj,
+                this.onPipeParamChange,
+                true
+            );
+        },
+
+        _addPipe: function(pipes, pipe, dataObj, onParamChange, prepend) {
 
             var self    = this,
                 name    = pipe.shift(),
-                fn      = null,
+                fn      = isFunction(name) ? name : null,
                 ws      = [],
-                negative= false,
+                fchar   = fn ? null : name.substr(0,1),
+                opt     = {
+                    neg: false,
+                    dblneg: false,
+                    undeterm: false,
+                    name: name
+                },
                 i, l;
 
-            if (name.substr(0,1) == "!") {
-                name = name.substr(1);
-                negative = true;
+            if (!fn) {
+                if (name.substr(0, 2) === "!!") {
+                    name = name.substr(2);
+                    opt.dblneg = true;
+                }
+                else {
+                    if (fchar === "!") {
+                        name = name.substr(1);
+                        opt.neg = true;
+                    }
+                    else if (fchar === "?") {
+                        name = name.substr(1);
+                        opt.undeterm = true;
+                    }
+                }
+            }
+            else {
+                opt.name = fn.name;
             }
 
-            if (self.nsGet) {
-                fn      = self.nsGet("filter." + name, true);
+            if (self.mock) {
+                fn      = function(){};
             }
-            if (!fn) {
-                fn      = (typeof window != "undefined" ? window[name] : null) || dataObj[name];
+            else {
+                if (!fn && self.filterLookup) {
+                    fn = self.filterLookup(name);
+                }
+                if (!fn) {
+                    fn = (typeof window !== "undefined" ? window[name] : null) || dataObj[name];
+                }
             }
+
+            //console.log(!!self.nsGet, name, fn)
 
             if (isFunction(fn)) {
 
                 for (i = -1, l = pipe.length; ++i < l;
-                     ws.push(create(dataObj, pipe[i], onParamChange, self, null, self.namespace))) {}
+                     ws.push(create(
+                         dataObj,
+                         pipe[i],
+                         onParamChange,
+                         self,
+                         {
+                             filterLookup: self.filterLookup,
+                             mock: self.mock
+                         }
+                     ))) {}
 
-                pipes.push([fn, pipe, ws, negative]);
+                if (fn.$undeterministic) {
+                    opt.undeterm = true;
+                }
+
+                pipes[prepend?"unshift":"push"]([fn, pipe, ws, opt]);
+
+                if (opt.undeterm) {
+                    self.deterministic = false;
+                }
             }
         },
 
-
-        _getValue: function() {
-
+        _getRawValue: function() {
             var self    = this,
                 val;
+
+            if (self.mock) {
+                return self.mock;
+            }
 
             switch (self.type) {
                 case "static":
@@ -6878,7 +7213,6 @@ var Watchable = function(){
                     break;
             }
 
-
             if (isArray(val)) {
                 if (!self.inputPipes) {
                     self._indexArrayItems(val);
@@ -6886,9 +7220,22 @@ var Watchable = function(){
                 val = val.slice();
             }
 
+            return val;
+        },
+
+        _getValue: function(useUnfiltered) {
+
+            var self    = this,
+                val     = useUnfiltered ? self.unfiltered : self._getRawValue();
+
             self.unfiltered = val;
 
-            val = self._runThroughPipes(val, self.pipes);
+            if (self.mock) {
+                val = self.mock;
+            }
+            else {
+                val = self._runThroughPipes(val, self.pipes);
+            }
 
             return val;
         },
@@ -6903,12 +7250,12 @@ var Watchable = function(){
                     self    = this,
                     jlen    = pipes.length,
                     dataObj = self.obj,
-                    neg,
+                    opt,
                     z, zl;
 
                 for (j = 0; j < jlen; j++) {
                     exprs   = pipes[j][1];
-                    neg     = pipes[j][3];
+                    opt     = pipes[j][3];
                     args    = [];
                     for (z = -1, zl = exprs.length; ++z < zl;
                          args.push(evaluate(exprs[z], dataObj))){}
@@ -6918,8 +7265,11 @@ var Watchable = function(){
 
                     val     = pipes[j][0].apply(null, args);
 
-                    if (neg) {
+                    if (opt.neg) {
                         val = !val;
+                    }
+                    else if (opt.dblneg) {
+                        val = !!val;
                     }
                 }
             }
@@ -6963,6 +7313,41 @@ var Watchable = function(){
         },
 
         /**
+         * @param {function|string} p
+         * @returns {boolean}
+         */
+        hasPipe: function(p) {
+            return this._hasPipe(this.pipes, p);
+        },
+
+        /**
+         * @param {function|string} p
+         * @returns {boolean}
+         */
+        hasInputPipe: function(p) {
+            return this._hasPipe(this.inputPipes, p);
+        },
+
+        /**
+         * @param {array} pipes
+         * @param {function|string} p
+         * @returns {boolean}
+         */
+        _hasPipe: function(pipes, p) {
+            if (!pipes) {
+                return false;
+            }
+            var i, l, name;
+            name = isFunction(p) ? p.name : p;
+            for (i = 0, l = pipes.length; i < l; i++) {
+                if (pipes[i][3].name === name) {
+                    return true;
+                }
+            }
+            return false;
+        },
+
+        /**
          * Get current value (filtered and via executing the code)
          * @returns {*}
          */
@@ -6984,6 +7369,14 @@ var Watchable = function(){
          */
         getPrevValue: function() {
             return this.prev;
+        },
+
+        /**
+         * Get last calculated value (with filters and pipes)
+         * @returns {*}
+         */
+        getLastValue: function() {
+            return this.curr;
         },
 
         /**
@@ -7030,10 +7423,10 @@ var Watchable = function(){
 
             val = self._runThroughPipes(val, self.inputPipes);
 
-            if (type == "attr") {
+            if (type === "attr") {
                 self.obj[self.code] = val;
             }
-            else if (type == "expr") {
+            else if (type === "expr") {
 
                 if (!self.setterFn) {
                     self.setterFn   = createSetter(self.code);
@@ -7041,7 +7434,7 @@ var Watchable = function(){
 
                 self.setterFn(self.obj, val);
             }
-            else if (type == "object") {
+            else if (type === "object") {
                 self.obj = val;
             }
         },
@@ -7054,10 +7447,12 @@ var Watchable = function(){
         },
 
         onPipeParamChange: function(val, prev, async) {
+            this.forcePipes = true;
             this.check();
+            this.forcePipes = false;
         },
 
-        onObserverChange: function(changes) {
+        /*onObserverChange: function(changes) {
 
             var self = this,
                 code = self.code,
@@ -7071,28 +7466,60 @@ var Watchable = function(){
                     break;
                 }
             }
-        },
+        },*/
 
         _check: function(async) {
 
             var self    = this,
-                val     = self._getValue(),
-                curr    = self.currCopy,
-                eq;
+                val;
 
-            if (self.obsrvDelegate) {
-                eq      = !self.obsrvChanged;
+            if (self.deterministic && self.pipes && !self.forcePipes) {
+                if (!self._checkUnfiltered()) {
+                    return false;
+                }
+                else {
+                    // code smell.
+                    // useUnfiltered param implies that
+                    // _checkUnfiltered has been called.
+                    val = self._getValue(true);
+                }
             }
             else {
-                eq      = equals(curr, val);
+                val     = self._getValue();
             }
+
+            var curr    = self.currCopy,
+                eq      = equals(curr, val);
+
+            //if (self.obsrvDelegate) {
+            //    eq      = !self.obsrvChanged;
+            //}
+            //else {
+            //    eq      = equals(curr, val);
+            //}
 
             if (!eq) {
                 self.curr = val;
                 self.prev = curr;
                 self.currCopy = isPrimitive(val) ? val : copy(val);
-                self.obsrvChanged = false;
+                //self.obsrvChanged = false;
                 observable.trigger(self.id, val, curr, async);
+                return true;
+            }
+
+            return false;
+        },
+
+        _checkUnfiltered: function() {
+
+            var self    = this,
+                val     = self._getRawValue(),
+                curr    = self.unfilteredCopy,
+                eq      = equals(curr, val);
+
+            if (!eq) {
+                self.unfiltered = val;
+                self.unfilteredCopy = isPrimitive(val) ? val : copy(val);
                 return true;
             }
 
@@ -7159,6 +7586,10 @@ var Watchable = function(){
 
             var self    = this,
                 id      = self.id;
+            
+            if (!id) {
+                return false;
+            }
 
             if (fn) {
                 observable.un(id, fn, fnScope);
@@ -7205,9 +7636,9 @@ var Watchable = function(){
                 }
             }
 
-            if (self.obsrvDelegate) {
-                Object.unobserve(self.obj, self.obsrvDelegate);
-            }
+            //if (self.obsrvDelegate) {
+            //    Object.unobserve(self.obj, self.obsrvDelegate);
+            //}
 
             if (self.obj) {
                 //delete self.obj.$$watchers.$codes[self.origCode];
@@ -7232,13 +7663,15 @@ var Watchable = function(){
      * @param {string} code
      * @param {function} fn
      * @param {object} fnScope
-     * @param {*} userData
-     * @param {Namespace} namespace
+     * @param {object} opt
      * @returns {Watchable}
      */
-    var create = function(obj, code, fn, fnScope, userData, namespace) {
+    var create = function(obj, code, fn, fnScope, opt) {
 
-            code = normalizeExpr(obj, trim(code));
+            opt = opt || {};
+            code = code || "";
+
+            code = normalizeExpr(obj, trim(code), opt.mock);
 
             if (obj) {
                 if (!obj.$$watchers) {
@@ -7276,16 +7709,18 @@ var Watchable = function(){
                 }
 
                 if (obj.$$watchers.$codes[code]) {
-                    obj.$$watchers.$codes[code].subscribe(fn, fnScope, {append: [userData], allowDupes: true});
+                    obj.$$watchers.$codes[code].subscribe(fn, fnScope,
+                        {append: [opt.userData || null], allowDupes: true});
                 }
                 else {
-                    obj.$$watchers.$codes[code] = new Watchable(obj, code, fn, fnScope, userData, namespace);
+                    obj.$$watchers.$codes[code] = new Watchable(
+                        obj, code, fn, fnScope, opt);
                 }
 
                 return obj.$$watchers.$codes[code];
             }
             else {
-                return new Watchable(obj, code, fn, fnScope, userData, namespace);
+                return new Watchable(obj, code, fn, fnScope, opt);
             }
         },
 
@@ -7312,16 +7747,41 @@ var Watchable = function(){
          * Normalize expression
          * @param {object} dataObj
          * @param {string} expr
+         * @param {*} mockMode
          * @returns {string}
          */
-        normalizeExpr = function(dataObj, expr) {
+        normalizeExpr = function(dataObj, expr, mockMode) {
+
+            if (expr.substr(0, 2) === '{{') {
+                expr = expr.substring(2, expr.length - 2);
+            }
+
+            // in mock mode we can't check dataObj for having
+            // a property. dataObj does not exists in this
+            // context
+            if (mockMode) {
+                var match;
+                if ((match = expr.match(/(^|this)\.([A-Z0-9_$]+)$/i)) !== null) {
+                    return match[2];
+                }
+                else {
+                    return expr;
+                }
+            }
+
             if (dataObj && expr) {
                 if (dataObj.hasOwnProperty(expr)) {
                     return expr;
                 }
                 var prop;
-                if (expr.charAt(0) == '.') {
+                if (expr.charAt(0) === '.') {
                     prop = expr.substr(1);
+                    if (dataObj.hasOwnProperty(prop)) {
+                        return prop;
+                    }
+                }
+                else if (expr.substr(0, 5) === "this.") {
+                    prop = expr.substr(5);
                     if (dataObj.hasOwnProperty(prop)) {
                         return prop;
                     }
@@ -7334,14 +7794,21 @@ var Watchable = function(){
          * Evaluate code against object
          * @param {string} expr
          * @param {object} scope
+         * @param {object} opt
          * @returns {*}
          */
-        evaluate    = function(expr, scope) {
+        evaluate    = function(expr, scope, opt) {
             var val;
             if (val = isStatic(expr)) {
                 return val;
             }
-            return createGetter(expr)(scope);
+            if (expr.indexOf('|') === -1) {
+                return createGetter(expr)(scope);
+            }
+            var w = create(scope, expr, null, null, opt),
+                v = w.getValue();
+            w.unsubscribeAndDestroy();
+            return v;
         };
 
 
@@ -7350,9 +7817,6 @@ var Watchable = function(){
     Watchable.unsubscribeAndDestroy = unsubscribeAndDestroy;
     Watchable.normalizeExpr = normalizeExpr;
     Watchable.eval = evaluate;
-    Watchable.usesNativeObserver = function() {
-        return nativeObserver;
-    };
 
     return Watchable;
 }();
@@ -7367,11 +7831,17 @@ var createWatchable = Watchable.create;
 
 
 
-var nsAdd = ns.add;
-
-
-
 var nsGet = ns.get;
+
+
+
+var filterLookup = function(name) {
+    return nsGet("filter." + name, true);
+};
+
+
+
+var nsAdd = ns.add;
 
 
 
@@ -7380,7 +7850,6 @@ var nsGet = ns.get;
 var Directive = function(){
 
     var attributes          = [],
-        tags                = [],
         attributesSorted    = false,
 
         compare             = function(a, b) {
@@ -7396,6 +7865,26 @@ var Directive = function(){
 
             // a must be equal to b
             return 0;
+        },
+
+        commentHolders      = function(node, name) {
+
+            name = name || "";
+
+            var before = window.document.createComment(name + " - start"),
+                after = window.document.createComment(name + " - end"),
+                parent = node.parentNode;
+
+            parent.insertBefore(before, node);
+
+            if (node.nextSibling) {
+                parent.insertBefore(after, node.nextSibling);
+            }
+            else {
+                parent.appendChild(after);
+            }
+
+            return [before, after];
         };
 
     return defineClass({
@@ -7403,15 +7892,18 @@ var Directive = function(){
         $class: "Directive",
 
         watcher: null,
+        stateFn: null,
         scope: null,
         node: null,
         expr: null,
+        mods: null,
 
         autoOnChange: true,
 
-        $init: function(scope, node, expr) {
+        $init: function(scope, node, expr, renderer, attr) {
 
             var self        = this,
+                config      = attr ? attr.config : {},
                 val;
 
             expr            = trim(expr);
@@ -7419,7 +7911,12 @@ var Directive = function(){
             self.node       = node;
             self.expr       = expr;
             self.scope      = scope;
-            self.watcher    = createWatchable(scope, expr, self.onChange, self, null, ns);
+            self.saveState  = config.saveState;
+            self.watcher    = createWatchable(scope, expr, self.onChange, self, {filterLookup: filterLookup});
+
+            if (self.saveState) {
+                self.stateFn = createSetter(self.saveState);
+            }
 
             if (self.autoOnChange && (val = self.watcher.getLastResult()) !== undf) {
                 self.onChange(val, undf);
@@ -7427,6 +7924,16 @@ var Directive = function(){
 
             scope.$on("destroy", self.onScopeDestroy, self);
             scope.$on("reset", self.onScopeReset, self);
+        },
+
+        getChildren: function() {
+            return null;
+        },
+
+        createCommentHolders: function(node, name) {
+            var cmts = commentHolders(node, name || this.$class);
+            this.prevEl = cmts[0];
+            this.nextEl = cmts[1];
         },
 
         onScopeDestroy: function() {
@@ -7437,7 +7944,15 @@ var Directive = function(){
 
         },
 
-        onChange: function() {},
+        onChange: function(val) {
+            this.saveStateOnChange(val);
+        },
+
+        saveStateOnChange: function(val) {
+            if (this.stateFn) {
+                this.stateFn(this.scope, val);
+            }
+        },
 
         destroy: function() {
             var self    = this;
@@ -7451,17 +7966,27 @@ var Directive = function(){
                 self.watcher.unsubscribeAndDestroy(self.onChange, self);
             }
 
+            if (self.prevEl) {
+                self.prevEl.parentNode.removeChild(self.prevEl);
+            }
+            if (self.nextEl) {
+                self.nextEl.parentNode.removeChild(self.nextEl);
+            }
+
             self.$super();
         }
     }, {
 
+        getDirective: function(type, name) {
+            return nsGet("directive." + type +"."+ name, true);
+        },
 
         registerAttribute: function registerAttribute(name, priority, handler) {
-            if (!nsGet("attr." + name, true)) {
+            if (!nsGet("directive.attr." + name, true)) {
                 attributes.push({
                     priority: priority,
                     name: name,
-                    handler: nsAdd("attr." + name, handler)
+                    handler: nsAdd("directive.attr." + name, handler)
                 });
                 attributesSorted = false;
             }
@@ -7476,109 +8001,39 @@ var Directive = function(){
         },
 
         registerTag: function registerTag(name, handler) {
-            if (!nsGet("tag." + name, true)) {
-                nsAdd("tag." + name, handler)
+            if (!nsGet("directive.tag." + name, true)) {
+                nsAdd("directive.tag." + name, handler)
             }
-        }
+        },
 
+        // components are case sensitive
+        registerComponent: function(name, cmp) {
+            if (!cmp) {
+                cmp = name;
+            }
+            if (isString(cmp)) {
+                cmp = nsGet(cmp, true);
+            }
+            if (!nsGet("directive.component." + name, true)) {
+                nsAdd("directive.component." + name.toLowerCase(), cmp)
+            }
+        },
+
+        commentHolders: commentHolders
     });
 
 }();
 
 
 
-
-function removeAttr(el, name) {
-    return el.removeAttribute(name);
-};
-
-var rToCamelCase = /-./g;
-
-function toCamelCase(str) {
-    return str.replace(rToCamelCase, function(match){
-        return match.charAt(1).toUpperCase();
-    });
-};
+var draggable = (function(){
 
 
 
-var getNodeData = function() {
-
-    var readDataSet = function(node) {
-        var attrs = node.attributes,
-            dataset = {},
-            i, l, name;
-
-        for (i = 0, l = attrs.length; i < l; i++) {
-            name = attrs[i].name;
-            if (name.indexOf("data-") === 0) {
-                dataset[toCamelCase(name.substr(5))] = attrs[i].value;
-            }
-        }
-
-        return dataset;
-    };
-
-
-    return function(node) {
-
-        if (node.dataset) {
-            return node.dataset;
-        }
-
-        var dataset;
-
-        if ((dataset = data(node, "data")) !== undf) {
-            return dataset;
-        }
-
-        dataset = readDataSet(node);
-        data(node, "data", dataset);
-        return dataset;
-    };
-
-
-}();
-
-
-
-function getNodeConfig(node, scope, expr) {
-
-    var cfg = data(node, "config"),
-        config, dataset, i, val;
-
-    if (cfg) {
-        return cfg;
-    }
-
-    cfg = {};
-
-    if (expr || (expr = getAttr(node, "mjs-config")) !== null) {
-        removeAttr(node, "mjs-config");
-        config = expr ? createGetter(expr)(scope || {}) : {};
-        for (i in config){
-            cfg[i] = config[i];
-        }
-    }
-
-    dataset = getNodeData(node);
-
-    for (i in dataset){
-        val = dataset[i];
-        cfg[i] = val === "" ? true : val;
-    }
-
-    data(node, "config", cfg);
-
-    return cfg;
-};
-
-
-
-Directive.registerAttribute("mjs-draggable", 1000, function(scope, node, expr){
+Directive.registerAttribute("draggable", 1000, function(scope, node, expr, renderer, attr){
 
     var cfg = createGetter(expr)(scope) || {},
-        nodeCfg = getNodeConfig(node),
+        nodeCfg = attr ? attr.config : {},
         watcher,
         draggable,
         onChange = function(val) {
@@ -7587,8 +8042,8 @@ Directive.registerAttribute("mjs-draggable", 1000, function(scope, node, expr){
 
     cfg.draggable = node;
 
-    if (nodeCfg.draggableIf) {
-        watcher = createWatchable(scope, nodeCfg.draggableIf, onChange);
+    if (nodeCfg.if) {
+        watcher = createWatchable(scope, nodeCfg.if, onChange);
         if (!watcher.getLastResult()) {
             cfg.enabled = false;
         }
@@ -7611,13 +8066,16 @@ Directive.registerAttribute("mjs-draggable", 1000, function(scope, node, expr){
         node = null;
     };
 });
+}());
+var droppable = (function(){
 
 
 
-Directive.registerAttribute("mjs-droppable", 1000, function(scope, node, expr){
+Directive.registerAttribute("droppable", 1000,
+    function(scope, node, expr, parentRenderer, attr){
 
     var cfg = createGetter(expr)(scope) || {},
-        nodeCfg = getNodeConfig(node),
+        nodeCfg = attr ? attr.config : {},
         watcher,
         droppable,
         onChange = function(val) {
@@ -7626,8 +8084,8 @@ Directive.registerAttribute("mjs-droppable", 1000, function(scope, node, expr){
 
     cfg.droppable = node;
 
-    if (nodeCfg.droppableIf) {
-        watcher = createWatchable(scope, nodeCfg.droppableIf, onChange);
+    if (nodeCfg.if) {
+        watcher = createWatchable(scope, nodeCfg.if, onChange);
         if (!watcher.getLastResult()) {
             cfg.enabled = false;
         }
@@ -7649,6 +8107,7 @@ Directive.registerAttribute("mjs-droppable", 1000, function(scope, node, expr){
         nodeCfg = null;
     };
 });
+}());
 
 
 
@@ -7894,9 +8353,9 @@ defineClass({
 
 
 
-function toFragment(nodes) {
+function toFragment(nodes, doc) {
 
-    var fragment = window.document.createDocumentFragment(),
+    var fragment = (doc || window.document).createDocumentFragment(),
         i, l;
 
     if (isString(nodes)) {
@@ -8222,10 +8681,11 @@ function onReady(fn, w) {
         addListener(win, 'load', init);
     }
 };
-var MetaphorJsExports = {};
-MetaphorJsExports['Draggable'] = Draggable;
-MetaphorJsExports['Droppable'] = Droppable;
-MetaphorJsExports['onReady'] = onReady;
-typeof global != "undefined" ? (global['MetaphorJs'] = MetaphorJsExports) : (window['MetaphorJs'] = MetaphorJsExports);
+var __mjsExport = {};
+__mjsExport['Draggable'] = Draggable;
+__mjsExport['Droppable'] = Droppable;
+__mjsExport['onReady'] = onReady;
 
-}());
+typeof global != "undefined" ? (global['MetaphorJs'] = __mjsExport) : (window['MetaphorJs'] = __mjsExport);
+
+}());/* BUNDLE END 003 */

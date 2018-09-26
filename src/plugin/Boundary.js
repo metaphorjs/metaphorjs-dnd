@@ -1,6 +1,6 @@
 
 
-var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
+var cls = require("metaphorjs-class/src/cls.js"),
     getOffset = require("metaphorjs/src/func/dom/getOffset.js"),
     getWidth = require("metaphorjs/src/func/dom/getWidth.js"),
     getHeight = require("metaphorjs/src/func/dom/getHeight.js"),
@@ -11,15 +11,14 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
     isArray = require("metaphorjs/src/func/isArray.js"),
     undf = require("metaphorjs/src/var/undf.js");
 
-module.exports = defineClass({
+module.exports = cls({
 
-    $class: "draggable.plugin.Boundary",
+    $class: "MetaphorJs.dnd.plugin.Boundary",
     drg: null,
     bndEl: null,
     bnd: null,
 
     $init: function(draggable) {
-
         this.drg = draggable;
     },
 
