@@ -1,9 +1,12 @@
+require("../../__init.js");
+require("metaphorjs/src/func/dom/removeStyle.js");
+require("metaphorjs/src/func/dom/toFragment.js");
 
 var cls = require("metaphorjs-class/src/cls.js"),
-    removeStyle = require("metaphorjs/src/func/dom/removeStyle.js");
+    MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
 
-module.exports = cls({
+module.exports = MetaphorJs.dnd.plugin.Placeholder = cls({
 
     $class: "MetaphorJs.dnd.plugin.Placeholder",
     drg: null,
@@ -41,7 +44,7 @@ module.exports = cls({
             el;
 
         if (cfg.tpl) {
-            el = toFragment(cfg.tpl).firstChild;
+            el = MetaphorJs.dom.toFragment(cfg.tpl).firstChild;
         }
         else {
             el = cfg.fn.call(cfg.context, drg);
@@ -89,7 +92,7 @@ module.exports = cls({
             }
 
             if (drg.$hasPlugin("MetaphorJs.dnd.plugin.Helper")) {
-                removeStyle(drg.draggable, "display");
+                MetaphorJs.dom.removeStyle(drg.draggable, "display");
             }
         }
     },

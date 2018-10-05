@@ -1,8 +1,10 @@
+require("../__init.js");
+require("../dnd/Draggable.js");
 
 var Directive = require("metaphorjs/src/class/Directive.js"),
     createGetter = require("metaphorjs-watchable/src/func/createGetter.js"),
     createWatchable = require("metaphorjs-watchable/src/func/createWatchable.js"),
-    Draggable = require("../class/Draggable.js");
+    MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
 Directive.registerAttribute("draggable", 1000, function(scope, node, expr, renderer, attr){
 
@@ -23,7 +25,7 @@ Directive.registerAttribute("draggable", 1000, function(scope, node, expr, rende
         }
     }
 
-    draggable = new Draggable(cfg);
+    draggable = new MetaphorJs.dnd.Draggable(cfg);
 
     return function() {
 

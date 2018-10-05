@@ -1,40 +1,42 @@
 
-var extend = require("metaphorjs/src/func/extend.js"),
-    bind = require("metaphorjs/src/func/bind.js"),
-    cls = require("metaphorjs-class/src/cls.js"),
-    MetaphorJs = require("metaphorjs/src/MetaphorJs.js"),
-    addListener = require("metaphorjs/src/func/event/addListener.js"),
-    removeListener = require("metaphorjs/src/func/event/removeListener.js"),
-    addClass = require("metaphorjs/src/func/dom/addClass.js"),
-    removeClass = require("metaphorjs/src/func/dom/removeClass.js"),
-    normalizeEvent = require("metaphorjs/src/func/event/normalizeEvent.js"),
-    getOffset = require("metaphorjs/src/func/dom/getOffset.js"),
-    getPosition = require("metaphorjs/src/func/dom/getPosition.js"),
-    getOuterWidth = require("metaphorjs/src/func/dom/getOuterWidth.js"),
-    getOuterHeight = require("metaphorjs/src/func/dom/getOuterHeight.js"),
-    getStyle = require("metaphorjs/src/func/dom/getStyle.js"),
-    getAnimationPrefixes = require("metaphorjs-animate/src/func/getAnimationPrefixes.js"),
-    async = require("metaphorjs/src/func/async.js"),
-    animate = require("metaphorjs-animate/src/func/animate.js"),
-    browserHasEvent = require("metaphorjs/src/func/browser/browserHasEvent.js"),
-    select = require("metaphorjs-select/src/func/select.js"),
-    is = require("metaphorjs-select/src/func/is.js");
+require("../__init.js");
 
+require("metaphorjs/src/func/dom/addListener.js");
+require("metaphorjs/src/func/dom/removeListener.js");
+require("metaphorjs/src/func/dom/addClass.js");
+require("metaphorjs/src/func/dom/removeClass.js");
+require("metaphorjs/src/func/dom/normalizeEvent.js");
+require("metaphorjs/src/func/dom/getOffset.js");
+require("metaphorjs/src/func/dom/getPosition.js");
+require("metaphorjs/src/func/dom/getOuterWidth.js");
+require("metaphorjs/src/func/dom/getOuterHeight.js");
+require("metaphorjs/src/func/dom/getStyle.js");
+require("metaphorjs/src/func/browser/hasEvent.js");
+require("metaphorjs/src/func/dom/select.js");
+require("metaphorjs/src/func/dom/is.js");
+require("metaphorjs-animate/src/animate/animate.js")
+require("metaphorjs-animate/src/animate/getPrefixes.js"),
 require("metaphorjs-observable/src/mixin/Observable.js");
-require("../plugin/Boundary.js");
-require("../plugin/draggable/Drop.js");
-require("../plugin/Helper.js");
-require("../plugin/Placeholder.js");
+require("./plugin/Boundary.js");
+require("./plugin/Drop.js");
+require("./plugin/Helper.js");
+require("./plugin/Placeholder.js");
 
-module.exports = function () {
+var extend = require("metaphorjs-shared/src/func/extend.js"),
+    bind = require("metaphorjs-shared/src/func/bind.js"),
+    cls = require("metaphorjs-class/src/cls.js"),
+    MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),
+    async = require("metaphorjs-shared/src/func/async.js");
 
-    var prefixes = getAnimationPrefixes(),
+module.exports = MetaphorJs.dnd.Draggable = function () {
+
+    var prefixes = MetaphorJs.animate.getPrefixes(),
         transformPrefix = prefixes.transform,
-        touchSupported = browserHasEvent("touchstart"),
+        touchSupported = MetaphorJs.browser.hasEvent("touchstart"),
         documentBlocked = false;
 
     var prepareEvent = function (e, node) {
-        e = normalizeEvent(e || window.event);
+        e = MetaphorJs.dom.normalizeEvent(e || window.event);
         var touches, i, l, trg;
 
         if (touches = e.touches) {
@@ -50,7 +52,7 @@ module.exports = function () {
     };
 
     var blockHandler = function (e) {
-        e = normalizeEvent(e || window.event);
+        e = MetaphorJs.dom.normalizeEvent(e || window.event);
         e.preventDefault();
         e.stopPropagation();
         return false;
@@ -58,95 +60,458 @@ module.exports = function () {
 
     var blockDocument = function () {
         var doc = window.document;
-        addListener(doc, "touchstart", blockHandler);
-        addListener(doc, "touchmove", blockHandler);
-        addListener(doc, "touchend", blockHandler);
+        MetaphorJs.dom.addListener(doc, "touchstart", blockHandler);
+        MetaphorJs.dom.addListener(doc, "touchmove", blockHandler);
+        MetaphorJs.dom.addListener(doc, "touchend", blockHandler);
         documentBlocked = true;
     };
 
 
+    /**
+     * @object MetaphorJs.dnd.Draggable.config
+     */
     var defaults = {
 
+        /**
+         * @property {DomNode} draggable {
+         *  Draggable object
+         *  @required
+         * }
+         */
         draggable:           null,
+
+        /**
+         * @property {boolean} blockDocumentEvents {
+         *  Blocks touchstart, touchmove and touchend events.
+         *  @default false
+         * }
+         */
         blockDocumentEvents: false,
 
+        /**
+         * @object cls
+         */
         cls: {
+            /**
+             * @property {string} drag Class to add while dragging
+             */
             drag: null
+            /**
+             * @end-object
+             */
         },
 
+        /**
+         * @object start
+         */
         start: {
+            /**
+             * @property {int} delay Number of milliseconds to delay dragging
+             */
             delay:         0,
+
+            /**
+             * @property {int} distance Number of pixels to move the mouse 
+             *  before dragging starts
+             */
             distance:      0,
+
+            /**
+             * @property {int} hold Similar to <code>delay</code> but during
+             * this hold period if mouse moves more than <code>holdThreshold</code>
+             * pixels, dragging gets cancelled.
+             */
             hold:          0,
+
+            /**
+             * @property {int} holdThreshold Number of pixels
+             */
             holdThreshold: 20,
+
+            /**
+             * @property {boolean} animate Run "mjs-drag-start" css animation
+             */
             animate:       false,
+
+            /**
+             * @property {string} not Selector to try against mousedown event target
+             * and all its parents. It any element matches the selector, 
+             * dragging gets cancelled.
+             */
             not:           null
+
+            /**
+             * @end-object
+             */
         },
 
+        /**
+         * @object end
+         */
         end: {
+            /**
+             * @property {boolean} restore Return element back to its original position
+             */
             restore: false,
+
+            /**
+             * @property {boolean} animate Run "mjs-drag-end" css animation
+             */
             animate: false
+
+            /**
+             * @end-object
+             */
         },
 
+        /**
+         * @object end
+         */
         drag: {
+            /**
+             * @property {string} method {
+             *  transform|position - apply movement via css transforms 
+             *  or absolute positioning
+             *  @default transform
+             * }
+             */
             method: "transform",
+
+            /**
+             * @property {string} axis x|y Move element on this axis
+             */
             axis:   null,
+
+            /**
+             * @property {string|DomNode} handle Use this element as drag handle
+             * instead of the whole element. If string - css selector
+             */
             handle: null
+
+            /**
+             * @end-object
+             */
         },
 
+        /**
+         * @object 
+         */
         cursor: {
+
+            /**
+             * @property {string} position {
+             *  click|c|t|r|b|l|tl|tr|bl|br: when dragging, 
+             *  position element the way so that cursor is in 
+             *  this position
+             *  @default click
+             * }
+             */
             position: 'click',
+
+            /**
+             * @property {int} offsetX cursor position offset
+             */
             offsetX:  0,
+
+            /**
+             * @property {int} offsetY cursor position offset
+             */
             offsetY:  0
+
+            /**
+             * @end-object
+             */
         },
 
+        /**
+         * Drop target
+         * @property {string|DomNode|jQuery} drop {
+         *  Css selector | jQuery object | Dom node<br>
+         * }
+         */
         drop: null, 	// fn|[dom|jquery|selector|droppable]
 
-
+        /**
+         * @object events
+         */
         events: {
+            /**
+             * Event name as key (mousedown|mouseup; * for all)
+             * @object *
+             */
             "*": {
+                /**
+                 * @property {boolean} returnValue
+                 */
                 returnValue:     false,
+                /**
+                 * @property {boolean} stopPropagation
+                 */
                 stopPropagation: true,
+                /**
+                 * @property {boolean} preventDefault
+                 */
                 preventDefault:  true
+
+                /**
+                 * @end-object
+                 */
             }
+            /**
+             * @end-object
+             */
         },
 
+        /**
+         * @object helper Drag helper settings
+         */
         helper: {
+            /**
+             * @property {boolean} destroy Destroy helper when dragging stops
+             */
             destroy:        true,
+
+            /**
+             * @property {int} zIndex Helper's z index
+             */
             zIndex:         9999,
+
+            /**
+             * @property {string} tpl Helper's html template
+             */
             tpl:            null,
+
+            /**
+             * @property {function} fn {
+             *  Funtion that creates helper
+             *  @param {MetaphorJs.dnd.Draggable} drg
+             *  @returns {DomNode}
+             * }
+             */
             fn:             null,
+
+            /**
+             * @property {object} context fn's context
+             */
             context:        null,
+
+            /**
+             * @property {DomNode} appendTo Append helper to this element
+             */
             appendTo:       null,
+
+            /**
+             * @property {boolean} manualPosition {
+             *  Cancel auto positioning of the helper
+             *  @default false
+             * }
+             */
             manualPosition: false,
+
+            /**
+             * @property {boolean} animate Run "mjs-leave" css animation 
+             * when dragging stops
+             */
             animate:        false
+
+            /**
+             * @end-object
+             */
         },
 
+        /**
+         * @object placeholder Placeholder settings
+         */
         placeholder: {
+            /**
+             * @property {boolean} destroy Destroy placeholder when dragging ended
+             */
             destroy:        true,
+
+            /**
+             * @property {string} tpl Placeholder's html template
+             */
             tpl:            null,
+
+            /**
+             * @property {function} fn {
+             *  Function that creates placeholder
+             *  @param {MetaphorJs.dnd.Draggable} drg
+             *  @returns {DomNode}
+             * }
+             */
             fn:             null,
+
+            /**
+             * @property {object} context fn's context
+             */
             context:        null,
+
+            /**
+             * @property {boolean} animate Animate placeholder
+             */
             animate:        false
+
+            /**
+             * @end-object
+             */
         },
 
+        /**
+         * @property {array} boundary {
+         *  [x, y, x1, y1]<br>
+         *  Dragging boundary
+         * }
+         */
         boundary: null,
 
+        /**
+         * @object callback
+         */
         callback: {
-            context:     null,
-            beforestart: null,
-            start:       null,
-            beforeend:   null,
-            end:         null,
-            drag:        null,
-            drop:        null,
-            destroy:     null
+            /**
+             * @property {object} context all callback's context
+             */
+            context:            null,
+
+            /**
+             * @property {function} * {
+             *  eventName: function(drg); See class's events
+             *  @param {MetaphorJs.dnd.Draggable} drg
+             * }
+             */
+
+            init:               null,
+            enable:             null,
+            disable:            null,
+            "correct-position": null,
+            "before-start":     null,
+            "before-actual-start": null,
+            start:              null,
+            "after-delay":      null,
+            "before-end":       null,
+            end:                null,
+            "end-animation":    null,
+            drag:               null,
+            "before-drop":      null,
+            drop:               null
+
+            /**
+             * @end-object
+             */
         }
+
+        /**
+         * @end-object
+         */
     };
 
+    /**
+     * Make dom objects draggable
+     * @class MetaphorJs.dnd.Draggable
+     * @extends MetaphorJs.cls.BaseClass
+     * @mixes MetaphorJs.mixin.Observable
+     */
     return cls({
 
-        $class:  "MetaphorJs.dnd.Draggable",
+        /**
+         * @event init {
+         *  @param {MetaphorJs.dnd.Draggable} drg
+         * }
+         */
+        /**
+         * @event enable {
+         *  @param {MetaphorJs.dnd.Draggable} drg
+         *  @returns {boolean} return false to cancel enabling
+         * }
+         */
+        /**
+         * @event disable {
+         *  @param {MetaphorJs.dnd.Draggable} drg
+         *  @returns {boolean} return false to cancel disabling
+         * }
+         */
+        /**
+         * @event correct-position {
+         *  @param {MetaphorJs.dnd.Draggable} drg
+         *  @param {object} pos {
+         *      @type {int} top
+         *      @type {int} left
+         *  }
+         *  @param {string} method transform|position
+         *  @param {MetaphorJs.lib.DomEvent} event Dom event
+         * }
+         */
+        /**
+         * @event before-start {
+         *  @param {MetaphorJs.dnd.Draggable} drg
+         *  @param {MetaphorJs.lib.DomEvent} event Dom event
+         *  @returns {boolean} Return false to cancel dragging
+         * }
+         */
+        /**
+         * @event after-delay {
+         *  @param {MetaphorJs.dnd.Draggable} drg
+         *  @param {MetaphorJs.lib.DomEvent} startEvent Dom event
+         * }
+         */
+        /**
+         * @event before-actual-start {
+         *  @param {MetaphorJs.dnd.Draggable} drg
+         *  @param {MetaphorJs.lib.DomEvent} startEvent Dom event
+         * }
+         */
+        /**
+         * @event start {
+         *  @param {MetaphorJs.dnd.Draggable} drg
+         *  @param {MetaphorJs.lib.DomEvent} startEvent Dom event
+         * }
+         */
+        /**
+         * @event before-end {
+         *  @param {MetaphorJs.dnd.Draggable} drg
+         *  @param {MetaphorJs.lib.DomEvent} lastMoveEvent Dom event
+         *  @param {MetaphorJs.lib.DomEvent} event Dom event (mouseup)
+         * }
+         */
+        /**
+         * @event end {
+         *  @param {MetaphorJs.dnd.Draggable} drg
+         *  @param {MetaphorJs.lib.DomEvent} event Dom event
+         *  @param {object} position {
+         *      @type {int} top
+         *      @type {int} left
+         *  }
+         * }
+         */
+        /**
+         * @event end-animation {
+         *  @param {MetaphorJs.dnd.Draggable} drg
+         * }
+         */
+        /**
+         * @event drag {
+         *  @param {MetaphorJs.dnd.Draggable} drg
+         *  @param {MetaphorJs.lib.DomEvent} event Dom event
+         *  @param {object} position {
+         *      @type {int} top
+         *      @type {int} left
+         *  }
+         * }
+         */
+        /**
+         * @event before-drop {
+         *  @param {MetaphorJs.dnd.Draggable} drg
+         *  @param {MetaphorJs.dnd.Droppable} drp
+         * }
+         */
+        /**
+         * @event drop {
+         *  @param {MetaphorJs.dnd.Draggable} drg
+         *  @param {MetaphorJs.dnd.Droppable} drp
+         * }
+         */
+
         $mixins: [MetaphorJs.mixin.Observable],
 
         draggable: null,
@@ -192,6 +557,13 @@ module.exports = function () {
             self.$super(cfg);
         },
 
+        /**
+         * @method
+         * @constructor
+         * @param {object} cfg {
+         *  @md-extend MetaphorJs.dnd.Draggable.config
+         * }
+         */
         $init: function (cfg) {
 
             var self = this;
@@ -217,8 +589,8 @@ module.exports = function () {
 
             var h;
             if (h = self.drag.handle) {
-                if (typeof h == "string") {
-                    self.handleEl = select(h).shift() || self.draggable;
+                if (typeof h === "string") {
+                    self.handleEl = MetaphorJs.dom.select(h).shift() || self.draggable;
                 }
                 else {
                     self.handleEl = h || self.draggable;
@@ -247,10 +619,27 @@ module.exports = function () {
         },
 
 
+        /**
+         * Get draggable node
+         * @method
+         * @returns {DomNode}
+         */
         getElem: function() {
             return this.draggable;
         },
 
+        /**
+         * @method
+         * @returns {boolean}
+         */
+        isEnabled: function() {
+            return this.enable;
+        },  
+
+        /**
+         * Enable draggable (enabled by default)
+         * @method
+         */
         enable: function () {
             var self = this;
             if (!self.enabled) {
@@ -261,6 +650,10 @@ module.exports = function () {
             }
         },
 
+        /**
+         * Disable draggable
+         * @method
+         */
         disable: function () {
             var self = this;
             if (self.enabled) {
@@ -274,7 +667,8 @@ module.exports = function () {
         setStartEvents: function (mode) {
 
             var self = this,
-                fn = mode == "bind" ? addListener : removeListener;
+                fn = mode == "bind" ? MetaphorJs.dom.addListener : 
+                                    MetaphorJs.dom.removeListener;
 
             fn(self.handleEl, "mousedown", self.onMousedownDelegate);
 
@@ -285,7 +679,8 @@ module.exports = function () {
 
         setMoveEvents: function (mode) {
 
-            var fn = mode == "bind" ? addListener : removeListener,
+            var fn = mode == "bind" ? MetaphorJs.dom.addListener : 
+                                    MetaphorJs.dom.removeListener,
                 html = document.documentElement,
                 self = this,
                 node = self.draggable;
@@ -334,7 +729,7 @@ module.exports = function () {
                 not     = self.start.not;
 
             while (trg) {
-                if (is(trg, not)) {
+                if (MetaphorJs.dom.is(trg, not)) {
                     return false;
                 }
                 trg = trg.parentNode;
@@ -416,11 +811,11 @@ module.exports = function () {
             self.trigger("before-actual-start", self, se);
 
             if (self.cls.drag) {
-                addClass(self.draggable, self.cls.drag);
+                MetaphorJs.dom.addClass(self.draggable, self.cls.drag);
             }
 
             if (self.start.animate) {
-                animate(self.dragEl, ["mjs-drag-start"], null, false);
+                MetaphorJs.dom.animate(self.dragEl, ["mjs-drag-start"], null, false);
             }
 
             self.trigger('start', self, se);
@@ -433,8 +828,8 @@ module.exports = function () {
                 node = self.draggable,
                 cur = self.cursor.position,
                 state = self.state,
-                ofs = getOffset(node),
-                pos = getPosition(node);
+                ofs = MetaphorJs.dom.getOffset(node),
+                pos = MetaphorJs.dom.getPosition(node);
 
             state.clickX = e.clientX;
             state.clickY = e.clientY;
@@ -444,32 +839,32 @@ module.exports = function () {
             state.offsetY = state.clickY - state.y;
             state.left = pos.left;
             state.top = pos.top;
-            state.w = getOuterWidth(node);
-            state.h = getOuterHeight(node);
-            state.mt = parseInt(getStyle(node, "marginTop"), 10);
-            state.ml = parseInt(getStyle(node, "marginLeft"), 10);
+            state.w = MetaphorJs.dom.getOuterWidth(node);
+            state.h = MetaphorJs.dom.getOuterHeight(node);
+            state.mt = parseInt(MetaphorJs.dom.getStyle(node, "marginTop"), 10);
+            state.ml = parseInt(MetaphorJs.dom.getStyle(node, "marginLeft"), 10);
 
             if (cur != 'click') {
 
-                var w = getOuterWidth(node),
-                    h = getOuterHeight(node);
+                var w = MetaphorJs.dom.getOuterWidth(node),
+                    h = MetaphorJs.dom.getOuterHeight(node);
 
-                if (cur.indexOf('c') != -1) {
+                if (cur.indexOf('c') !== -1) {
                     state.offsetX = w / 2;
                     state.offsetY = h / 2;
                 }
 
-                if (cur.indexOf('t') != -1) {
+                if (cur.indexOf('t') !== -1) {
                     state.offsetY = 0;
                 }
-                else if (cur.indexOf('b') != -1) {
+                else if (cur.indexOf('b') !== -1) {
                     state.offsetY = h;
                 }
 
-                if (cur.indexOf('l') != -1) {
+                if (cur.indexOf('l') !== -1) {
                     state.offsetX = 0;
                 }
-                else if (cur.indexOf('r') != -1) {
+                else if (cur.indexOf('r') !== -1) {
                     state.offsetX = w;
                 }
             }
@@ -647,7 +1042,7 @@ module.exports = function () {
 
 
             if (self.end.animate) {
-                animate(
+                MetaphorJs.animate.animate(
                     self.end.restore ? self.dragEl : self.holderEl,
                     ["mjs-drag-end"],
                     null,
@@ -671,7 +1066,7 @@ module.exports = function () {
                 pos;
 
             if (self.cls.drag) {
-                removeClass(el, self.cls.drag);
+                MetaphorJs.dom.removeClass(el, self.cls.drag);
             }
 
             if (self.end.restore) {

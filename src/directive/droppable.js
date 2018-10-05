@@ -1,8 +1,10 @@
+require("../__init.js");
+require("../dnd/Droppable.js")
 
 var Directive = require("metaphorjs/src/class/Directive.js"),
     createGetter = require("metaphorjs-watchable/src/func/createGetter.js"),
     createWatchable = require("metaphorjs-watchable/src/func/createWatchable.js"),
-    Droppable = require("../class/Droppable.js");
+    MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
 Directive.registerAttribute("droppable", 1000,
     function(scope, node, expr, parentRenderer, attr){
@@ -24,7 +26,7 @@ Directive.registerAttribute("droppable", 1000,
         }
     }
 
-    droppable = new Droppable(cfg);
+    droppable = new MetaphorJs.dnd.Droppable(cfg);
 
     return function() {
 
