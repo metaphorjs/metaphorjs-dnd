@@ -165,7 +165,7 @@ module.exports = MetaphorJs.dnd.Draggable = function () {
         },
 
         /**
-         * @object end
+         * @object drag
          */
         drag: {
             /**
@@ -194,7 +194,7 @@ module.exports = MetaphorJs.dnd.Draggable = function () {
         },
 
         /**
-         * @object 
+         * @object cursor
          */
         cursor: {
 
