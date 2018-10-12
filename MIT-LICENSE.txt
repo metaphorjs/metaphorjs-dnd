@@ -1,5 +1,5 @@
-Copyright 2014 johann kuindji
-http://kuindji.com/
+Copyright 2018 Ivan Kuindzhi
+http://metaphorjs.org
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
