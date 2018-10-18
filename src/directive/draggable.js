@@ -1,12 +1,13 @@
+
 require("../__init.js");
 require("../dnd/Draggable.js");
 require("metaphorjs/src/lib/Expression.js");
+require("metaphorjs/src/lib/MutationObserver.js");
 
 var Directive = require("metaphorjs/src/class/Directive.js"),
-    createWatchable = require("metaphorjs-watchable/src/func/createWatchable.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
-Directive.registerAttribute("draggable", 1000, function(scope, node, expr, renderer, attr){
+Directive.registerAttribute("draggable", 1000, function(scope, node, expr, renderer, attr) {
 
     var cfg = MetaphorJs.lib.Expression.parse(expr)(scope) || {},
         nodeCfg = attr ? attr.config : {},
@@ -19,8 +20,8 @@ Directive.registerAttribute("draggable", 1000, function(scope, node, expr, rende
     cfg.draggable = node;
 
     if (nodeCfg.if) {
-        watcher = createWatchable(scope, nodeCfg.if, onChange);
-        if (!watcher.getLastResult()) {
+        watcher = MetaphorJs.lib.MutationObserver.get(scope, nodeCfg.if, onChange);
+        if (!watcher.getValue()) {
             cfg.enabled = false;
         }
     }
@@ -30,7 +31,8 @@ Directive.registerAttribute("draggable", 1000, function(scope, node, expr, rende
     return function() {
 
         if (watcher) {
-            watcher.unsubscribeAndDestroy(onChange, null);
+            watcher.unsubscribe(onChange);
+            watcher.$destroy(true);
             watcher = null;
         }
 

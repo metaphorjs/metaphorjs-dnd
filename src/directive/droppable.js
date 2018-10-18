@@ -1,9 +1,9 @@
 require("../__init.js");
 require("../dnd/Droppable.js")
 require("metaphorjs/src/lib/Expression.js");
+require("metaphorjs/src/lib/MutationObserver.js");
 
 var Directive = require("metaphorjs/src/class/Directive.js"),
-    createWatchable = require("metaphorjs-watchable/src/func/createWatchable.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
 Directive.registerAttribute("droppable", 1000,
@@ -20,8 +20,8 @@ Directive.registerAttribute("droppable", 1000,
     cfg.droppable = node;
 
     if (nodeCfg.if) {
-        watcher = createWatchable(scope, nodeCfg.if, onChange);
-        if (!watcher.getLastResult()) {
+        watcher = MetaphorJs.lib.MutationObserver.get(scope, nodeCfg.if, onChange);
+        if (!watcher.getValue()) {
             cfg.enabled = false;
         }
     }
@@ -31,7 +31,8 @@ Directive.registerAttribute("droppable", 1000,
     return function() {
 
         if (watcher) {
-            watcher.unsubscribeAndDestroy(onChange, null);
+            watcher.unsubscribe(onChange);
+            watcher.$destroy(true);
             watcher = null;
         }
 
