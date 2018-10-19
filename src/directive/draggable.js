@@ -4,7 +4,7 @@ require("../dnd/Draggable.js");
 require("metaphorjs/src/lib/Expression.js");
 require("metaphorjs/src/lib/MutationObserver.js");
 
-var Directive = require("metaphorjs/src/class/Directive.js"),
+var Directive = require("metaphorjs/src/app/Directive.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
 Directive.registerAttribute("draggable", 1000, function(scope, node, expr, renderer, attr) {
