@@ -73,7 +73,7 @@ module.exports = MetaphorJs.dnd.Draggable = function () {
     var defaults = {
 
         /**
-         * @property {DomNode} draggable {
+         * @property {HTMLElement} draggable {
          *  Draggable object
          *  @required
          * }
@@ -285,7 +285,7 @@ module.exports = MetaphorJs.dnd.Draggable = function () {
              * @property {function} fn {
              *  Funtion that creates helper
              *  @param {MetaphorJs.dnd.Draggable} drg
-             *  @returns {DomNode}
+             *  @returns {HTMLElement}
              * }
              */
             fn:             null,
@@ -296,7 +296,7 @@ module.exports = MetaphorJs.dnd.Draggable = function () {
             context:        null,
 
             /**
-             * @property {DomNode} appendTo Append helper to this element
+             * @property {HTMLElement} appendTo Append helper to this element
              */
             appendTo:       null,
 
@@ -337,7 +337,7 @@ module.exports = MetaphorJs.dnd.Draggable = function () {
              * @property {function} fn {
              *  Function that creates placeholder
              *  @param {MetaphorJs.dnd.Draggable} drg
-             *  @returns {DomNode}
+             *  @returns {HTMLElement}
              * }
              */
             fn:             null,
@@ -622,7 +622,7 @@ module.exports = MetaphorJs.dnd.Draggable = function () {
         /**
          * Get draggable node
          * @method
-         * @returns {DomNode}
+         * @returns {HTMLElement}
          */
         getElem: function() {
             return this.draggable;

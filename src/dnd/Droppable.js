@@ -37,7 +37,7 @@ module.exports = (function(){
          * }
          */
         /**
-         * @property {DomNode} accept Accept specific dom node
+         * @property {HTMLElement} accept Accept specific dom node
          */
         accept: true,
 
@@ -205,7 +205,7 @@ module.exports = (function(){
         /**
          * Check if this droppable accepts draggable
          * @method
-         * @param {DomNode} draggable
+         * @param {HTMLElement} draggable
          * @returns {boolean}
          */
         accepts: function(draggable) {
