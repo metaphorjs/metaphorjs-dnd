@@ -7,40 +7,33 @@ require("metaphorjs/src/lib/MutationObserver.js");
 var Directive = require("metaphorjs/src/app/Directive.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
-Directive.registerAttribute("draggable", 1000, function(scope, node, expr, renderer, attr) {
+Directive.registerAttribute("draggable", 1000, function(scope, node, config, renderer, attr) {
 
-    var cfg = MetaphorJs.lib.Expression.parse(expr)(scope) || {},
-        nodeCfg = attr ? attr.config : {},
-        watcher,
+    config.setType("if", "bool");
+
+    var cfg = {},
         draggable,
         onChange = function(val) {
-            draggable[val ? "enable" : "disable"]();
+            draggable && draggable[val ? "enable" : "disable"]();
         };
 
-    cfg.draggable = node;
-
-    if (nodeCfg.if) {
-        watcher = MetaphorJs.lib.MutationObserver.get(scope, nodeCfg.if, onChange);
-        if (!watcher.getValue()) {
-            cfg.enabled = false;
-        }
+    if (config.has("if")) {
+        config.on("if", onChange);
+        cfg.enabled = config.get("if");
     }
 
-    draggable = new MetaphorJs.dnd.Draggable(cfg);
+    Directive.resolveNode(node, "draggable", function(node){
+        if (cfg) {
+            cfg.draggable = node;
+            draggable = new MetaphorJs.dnd.Draggable(cfg);
+        }
+    });
 
     return function() {
-
-        if (watcher) {
-            watcher.unsubscribe(onChange);
-            watcher.$destroy(true);
-            watcher = null;
-        }
-
         onChange = null;
-        draggable.$destroy();
+        draggable && draggable.$destroy();
         draggable = null;
         cfg = null;
-        nodeCfg = null;
         node = null;
     };
 });
