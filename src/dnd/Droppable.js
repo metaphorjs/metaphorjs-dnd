@@ -1,8 +1,10 @@
-require("metaphorjs/src/func/dom/is.js"),
-require("metaphorjs/src/func/dom/addClass.js"),
-require("metaphorjs/src/func/dom/removeClass.js"),
-require("metaphorjs/src/func/dom/getOffset.js"),
-require("metaphorjs/src/func/dom/getOuterWidth.js"),
+
+require("../__init.js");
+require("metaphorjs/src/func/dom/is.js");
+require("metaphorjs/src/func/dom/addClass.js");
+require("metaphorjs/src/func/dom/removeClass.js");
+require("metaphorjs/src/func/dom/getOffset.js");
+require("metaphorjs/src/func/dom/getOuterWidth.js");
 require("metaphorjs/src/func/dom/getOuterHeight.js");
 require("metaphorjs-observable/src/mixin/Observable.js");
 

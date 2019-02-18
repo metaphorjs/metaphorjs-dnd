@@ -5,13 +5,14 @@ require("metaphorjs/src/lib/Expression.js");
 require("metaphorjs/src/lib/MutationObserver.js");
 
 var Directive = require("metaphorjs/src/app/Directive.js"),
-    MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
+    MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),
+    async = require("metaphorjs-shared/src/func/async.js");
 
 Directive.registerAttribute("draggable", 1000, function(scope, node, config, renderer, attr) {
 
     config.setType("if", "bool");
 
-    var cfg = {},
+    var cfg = config.get("cfg") || {},
         draggable,
         onChange = function(val) {
             draggable && draggable[val ? "enable" : "disable"]();
@@ -23,10 +24,12 @@ Directive.registerAttribute("draggable", 1000, function(scope, node, config, ren
     }
 
     Directive.resolveNode(node, "draggable", function(node){
-        if (cfg) {
-            cfg.draggable = node;
-            draggable = new MetaphorJs.dnd.Draggable(cfg);
-        }
+        async(function(){
+            if (cfg) {
+                cfg.draggable = node;
+                draggable = new MetaphorJs.dnd.Draggable(cfg);
+            }
+        });
     });
 
     return function() {

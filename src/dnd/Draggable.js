@@ -14,8 +14,8 @@ require("metaphorjs/src/func/dom/getStyle.js");
 require("metaphorjs/src/func/browser/hasEvent.js");
 require("metaphorjs/src/func/dom/select.js");
 require("metaphorjs/src/func/dom/is.js");
-require("metaphorjs-animate/src/animate/animate.js")
-require("metaphorjs-animate/src/animate/getPrefixes.js"),
+require("metaphorjs-animate/src/animate/animate.js");
+require("metaphorjs-animate/src/animate/getPrefixes.js");
 require("metaphorjs-observable/src/mixin/Observable.js");
 require("./plugin/Boundary.js");
 require("./plugin/Drop.js");
