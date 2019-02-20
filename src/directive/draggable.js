@@ -12,7 +12,7 @@ Directive.registerAttribute("draggable", 1000, function(scope, node, config, ren
 
     config.setType("if", "bool");
 
-    var cfg = config.get("cfg") || {},
+    var cfg = config.get("value") || {},
         draggable,
         onChange = function(val) {
             draggable && draggable[val ? "enable" : "disable"]();

@@ -9,7 +9,7 @@ var Directive = require("metaphorjs/src/app/Directive.js"),
 Directive.registerAttribute("droppable", 1000,
     function(scope, node, config, renderer, attr){
 
-    var cfg = {},
+    var cfg = config.get("value") || {},
         droppable,
         onChange = function(val) {
             droppable && droppable[val ? "enable" : "disable"]();
