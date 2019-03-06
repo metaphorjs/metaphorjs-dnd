@@ -12,24 +12,32 @@ Directive.registerAttribute("draggable", 1000, function(scope, node, config, ren
 
     config.setType("if", "bool");
 
-    var cfg = config.get("value") || {},
+    var cfg,
         draggable,
         onChange = function(val) {
             draggable && draggable[val ? "enable" : "disable"]();
         };
 
-    if (config.has("if")) {
-        config.on("if", onChange);
-        cfg.enabled = config.get("if");
-    }
-
-    Directive.resolveNode(node, "draggable", function(node){
-        async(function(){
-            if (cfg) {
-                cfg.draggable = node;
-                draggable = new MetaphorJs.dnd.Draggable(cfg);
+    var init = function(node) {
+        if (config)  {
+            cfg = config.get("value") || {};
+            config.disableProperty("value");
+            if (config.has("if")) {
+                config.on("if", onChange);
+                cfg.enabled = config.get("if");
             }
-        });
+
+            !cfg.draggable && (cfg.draggable = node);
+            draggable = new MetaphorJs.dnd.Draggable(cfg);
+        }
+    };
+
+    renderer.on("rendered", function(){
+        if (node) {
+            Directive.resolveNode(node, "draggable", function(node){
+                async(init, null, [node]);
+            });
+        }
     });
 
     return function() {
@@ -38,5 +46,6 @@ Directive.registerAttribute("draggable", 1000, function(scope, node, config, ren
         draggable = null;
         cfg = null;
         node = null;
+        config = null;
     };
 });

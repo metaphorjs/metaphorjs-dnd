@@ -590,10 +590,13 @@ module.exports = MetaphorJs.dnd.Draggable = function () {
             var h;
             if (h = self.drag.handle) {
                 if (typeof h === "string") {
-                    self.handleEl = MetaphorJs.dom.select(h).shift() || self.draggable;
+                    self.handleEl = MetaphorJs.dom.select(h).shift();
                 }
                 else {
-                    self.handleEl = h || self.draggable;
+                    self.handleEl = h;
+                }
+                if (!self.handleEl) {
+                    throw new Error("Handle element not found");
                 }
             }
             else {
