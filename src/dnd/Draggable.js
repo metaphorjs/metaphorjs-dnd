@@ -670,7 +670,7 @@ module.exports = MetaphorJs.dnd.Draggable = function () {
         setStartEvents: function (mode) {
 
             var self = this,
-                fn = mode == "bind" ? MetaphorJs.dom.addListener : 
+                fn = mode === "bind" ? MetaphorJs.dom.addListener : 
                                     MetaphorJs.dom.removeListener;
 
             fn(self.handleEl, "mousedown", self.onMousedownDelegate);
@@ -682,7 +682,7 @@ module.exports = MetaphorJs.dnd.Draggable = function () {
 
         setMoveEvents: function (mode) {
 
-            var fn = mode == "bind" ? MetaphorJs.dom.addListener : 
+            var fn = mode === "bind" ? MetaphorJs.dom.addListener : 
                                     MetaphorJs.dom.removeListener,
                 html = document.documentElement,
                 self = this,
@@ -926,7 +926,7 @@ module.exports = MetaphorJs.dnd.Draggable = function () {
                 }
             }
 
-            if (self.drag.method == "transform") {
+            if (self.drag.method === "transform") {
                 self.lastPosition = self.applyTransform(e);
             }
             else {
@@ -1052,7 +1052,7 @@ module.exports = MetaphorJs.dnd.Draggable = function () {
                     false,
                     null,
                     function(el, position, stage){
-                        if (stage == "active") {
+                        if (stage === "active") {
                             self.positionOnStop(moveEvent);
                         }
                     })
@@ -1078,7 +1078,7 @@ module.exports = MetaphorJs.dnd.Draggable = function () {
             else if (el !== self.dragEl) {
                 pos = self.applyPosition(e, el);
             }
-            else if (self.drag.method == "transform") {
+            else if (self.drag.method === "transform") {
                 pos = self.applyPosition(e, null, true);
             }
 
