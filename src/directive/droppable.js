@@ -1,42 +1,50 @@
+require("../__init.js");
+require("../dnd/Droppable.js")
+require("metaphorjs/src/lib/Expression.js");
+require("metaphorjs/src/lib/MutationObserver.js");
 
-var Directive = require("metaphorjs/src/class/Directive.js"),
-    createGetter = require("metaphorjs-watchable/src/func/createGetter.js"),
-    createWatchable = require("metaphorjs-watchable/src/func/createWatchable.js"),
-    Droppable = require("../class/Droppable.js");
+var Directive = require("metaphorjs/src/app/Directive.js"),
+    MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
 Directive.registerAttribute("droppable", 1000,
-    function(scope, node, expr, parentRenderer, attr){
+    function(scope, node, config, renderer, attr){
 
-    var cfg = createGetter(expr)(scope) || {},
-        nodeCfg = attr ? attr.config : {},
-        watcher,
+    var cfg,
         droppable,
         onChange = function(val) {
-            droppable[val ? "enable" : "disable"]();
+            droppable && droppable[val ? "enable" : "disable"]();
         };
 
-    cfg.droppable = node;
+    var init = function(node) {
+        if (config) {
+            cfg = config.get("value") || {};
+            config.disableProperty("value");
+    
+            if (config.has("if")) {
+                config.on("if", onChange);
+                cfg.enabled = config.get("if");
+            }
 
-    if (nodeCfg.if) {
-        watcher = createWatchable(scope, nodeCfg.if, onChange);
-        if (!watcher.getLastResult()) {
-            cfg.enabled = false;
+            !cfg.droppable && (cfg.droppable = node);
+            droppable = new MetaphorJs.dnd.Droppable(cfg);
         }
-    }
+    };
 
-    droppable = new Droppable(cfg);
+    renderer.on("rendered", function(){
+        if (node) {
+            Directive.resolveNode(node, "droppable", function(node){
+                async(init, null, [node]);
+            });
+        }
+    });
+    
 
     return function() {
-
-        if (watcher) {
-            watcher.unsubscribeAndDestroy(onChange, null);
-            watcher = null;
-        }
-
         onChange = null;
-        droppable.$destroy();
+        droppable && droppable.$destroy();
         droppable = null;
         cfg = null;
-        nodeCfg = null;
+        config = null;
+        node = null;
     };
 });

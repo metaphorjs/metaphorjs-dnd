@@ -8,32 +8,27 @@
 
   "build": {
     "standalone": {
-      "wrap": true,
-      "global": true,
-      "auto": true,
       "target": "dist/metaphorjs.dnd.js",
       "files": [
-        "metaphorjs/src/MetaphorJs.js",
-        [
-          "src/class/**",
-          {
-            "as": "*"
-          }
-        ],
-        "src/directive/**",
+        "src/dnd/**",
         "src/plugin/**",
-        [
-          "metaphorjs/src/func/dom/onReady.js",
-          {
-            "as": "onReady"
-          }
-        ]
+        "metaphorjs/src/func/dom/onReady.js"
       ],
-      "expose": [
-        "Draggable",
-        "Droppable",
-        "onReady"
-      ]
+      "options": {
+        "wrap": true,
+        "global": true,
+        "expose": [
+          "MetaphorJs.dnd.Draggable",
+          "MetaphorJs.dnd.Droppable",
+          "MetaphorJs.dom.onReady"
+        ]
+      }
+    },
+
+    "standalone-min": {
+      "extend": "standalone",
+      "target": "dist/metaphorjs.dnd.min.js",
+      "pipe": ["build", "compile", "write"]
     }
   }
 }

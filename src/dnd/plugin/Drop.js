@@ -1,11 +1,13 @@
+require("../../__init.js");
+require("../Droppable.js");
 
-var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
-    Droppable = require("../../class/Droppable.js");
+var cls = require("metaphorjs-class/src/cls.js"),
+    MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
 
-module.exports = defineClass({
+module.exports = MetaphorJs.dnd.plugin.Drop = cls({
 
-    $class: "draggable.plugin.Drop",
+    $class: "MetaphorJs.dnd.plugin.Drop",
     drg: null,
     droppables: null,
 
@@ -35,7 +37,7 @@ module.exports = defineClass({
             to		= drg.drop,
             drps	= isFunction(to) ?
                         to.call(drg.$$callbackContext, drg) :
-                        Droppable.getAll(),
+                        MetaphorJs.dnd.Droppable.getAll(),
             i, l;
 
         e = e || drg.lastMoveEvent || drg.startEvent;

@@ -1,42 +1,51 @@
 
-var Directive = require("metaphorjs/src/class/Directive.js"),
-    createGetter = require("metaphorjs-watchable/src/func/createGetter.js"),
-    createWatchable = require("metaphorjs-watchable/src/func/createWatchable.js"),
-    Draggable = require("../class/Draggable.js");
+require("../__init.js");
+require("../dnd/Draggable.js");
+require("metaphorjs/src/lib/Expression.js");
+require("metaphorjs/src/lib/MutationObserver.js");
 
-Directive.registerAttribute("draggable", 1000, function(scope, node, expr, renderer, attr){
+var Directive = require("metaphorjs/src/app/Directive.js"),
+    MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),
+    async = require("metaphorjs-shared/src/func/async.js");
 
-    var cfg = createGetter(expr)(scope) || {},
-        nodeCfg = attr ? attr.config : {},
-        watcher,
+Directive.registerAttribute("draggable", 1000, function(scope, node, config, renderer, attr) {
+
+    config.setType("if", "bool");
+
+    var cfg,
         draggable,
         onChange = function(val) {
-            draggable[val ? "enable" : "disable"]();
+            draggable && draggable[val ? "enable" : "disable"]();
         };
 
-    cfg.draggable = node;
+    var init = function(node) {
+        if (config)  {
+            cfg = config.get("value") || {};
+            config.disableProperty("value");
+            if (config.has("if")) {
+                config.on("if", onChange);
+                cfg.enabled = config.get("if");
+            }
 
-    if (nodeCfg.if) {
-        watcher = createWatchable(scope, nodeCfg.if, onChange);
-        if (!watcher.getLastResult()) {
-            cfg.enabled = false;
+            !cfg.draggable && (cfg.draggable = node);
+            draggable = new MetaphorJs.dnd.Draggable(cfg);
         }
-    }
+    };
 
-    draggable = new Draggable(cfg);
+    renderer.on("rendered", function(){
+        if (node) {
+            Directive.resolveNode(node, "draggable", function(node){
+                async(init, null, [node]);
+            });
+        }
+    });
 
     return function() {
-
-        if (watcher) {
-            watcher.unsubscribeAndDestroy(onChange, null);
-            watcher = null;
-        }
-
         onChange = null;
-        draggable.$destroy();
+        draggable && draggable.$destroy();
         draggable = null;
         cfg = null;
-        nodeCfg = null;
         node = null;
+        config = null;
     };
 });

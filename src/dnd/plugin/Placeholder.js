@@ -1,11 +1,14 @@
+require("../../__init.js");
+require("metaphorjs/src/func/dom/removeStyle.js");
+require("metaphorjs/src/func/dom/toFragment.js");
 
-var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
-    removeStyle = require("metaphorjs/src/func/dom/removeStyle.js");
+var cls = require("metaphorjs-class/src/cls.js"),
+    MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
 
-module.exports = defineClass({
+module.exports = MetaphorJs.dnd.plugin.Placeholder = cls({
 
-    $class: "draggable.plugin.Placeholder",
+    $class: "MetaphorJs.dnd.plugin.Placeholder",
     drg: null,
     placeholderEl: null,
 
@@ -41,7 +44,7 @@ module.exports = defineClass({
             el;
 
         if (cfg.tpl) {
-            el = toFragment(cfg.tpl).firstChild;
+            el = MetaphorJs.dom.toFragment(cfg.tpl).firstChild;
         }
         else {
             el = cfg.fn.call(cfg.context, drg);
@@ -71,7 +74,7 @@ module.exports = defineClass({
             cfg.appendTo.appendChild(pl);
         }
 
-        if (drg.$hasPlugin("draggable.plugin.Helper")) {
+        if (drg.$hasPlugin("MetaphorJs.dnd.plugin.Helper")) {
             el.style.display = "none";
         }
     },
@@ -88,8 +91,8 @@ module.exports = defineClass({
                 self.placeholderEl = null;
             }
 
-            if (drg.$hasPlugin("draggable.plugin.Helper")) {
-                removeStyle(drg.draggable, "display");
+            if (drg.$hasPlugin("MetaphorJs.dnd.plugin.Helper")) {
+                MetaphorJs.dom.removeStyle(drg.draggable, "display");
             }
         }
     },
@@ -98,7 +101,7 @@ module.exports = defineClass({
         var self = this,
             drg = self.drg;
 
-        if (drg.$hasPlugin("draggable.plugin.Helper") && !drg.end.restore) {
+        if (drg.$hasPlugin("MetaphorJs.dnd.plugin.Helper") && !drg.end.restore) {
             self.destroyPlaceholder();
             drg.holderEl = drg.draggable;
         }

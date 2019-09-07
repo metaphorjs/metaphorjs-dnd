@@ -1,12 +1,13 @@
+require("../../__init.js");
+require("metaphorjs/src/func/dom/toFragment.js");
+require("metaphorjs-animate/src/animate/animate.js");
 
-var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
-    toFragment = require("metaphorjs/src/func/dom/toFragment.js"),
-    animate = require("metaphorjs-animate/src/func/animate.js");
+var cls = require("metaphorjs-class/src/cls.js"),
+    MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
+module.exports = MetaphorJs.dnd.plugin.Helper = cls({
 
-module.exports = defineClass({
-    $class: "draggable.plugin.Helper",
-
+    $class: "MetaphorJs.dnd.plugin.Helper",
     drg: null,
     helperEl: null,
 
@@ -31,7 +32,7 @@ module.exports = defineClass({
             el;
 
         if (cfg.tpl) {
-            el = toFragment(cfg.tpl).firstChild;
+            el = MetaphorJs.dom.toFragment(cfg.tpl).firstChild;
         }
         else {
             el = cfg.fn.call(cfg.context, drg);
@@ -92,7 +93,7 @@ module.exports = defineClass({
             self.destroyHelper();
         }
         if (helperAnim){
-            animate(self.helperEl, "leave", null, false)
+            MetaphorJs.animate.animate(self.helperEl, "leave", null, false)
                 .done(self.destroyHelper, self);
         }
     },

@@ -1,25 +1,25 @@
+require("../../__init.js");
+require("metaphorjs/src/func/dom/getOffset.js");
+require("metaphorjs/src/func/dom/getWidth.js");
+require("metaphorjs/src/func/dom/getHeight.js");
+require("metaphorjs/src/func/dom/getOuterWidth.js");
+require("metaphorjs/src/func/dom/getOuterHeight.js");
+require("metaphorjs/src/func/dom/getStyle.js");
+require("metaphorjs/src/func/dom/select.js");
 
+var cls = require("metaphorjs-class/src/cls.js"),
+    isArray = require("metaphorjs-shared/src/func/isArray.js"),
+    undf = require("metaphorjs-shared/src/var/undf.js"),
+    MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
-var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
-    getOffset = require("metaphorjs/src/func/dom/getOffset.js"),
-    getWidth = require("metaphorjs/src/func/dom/getWidth.js"),
-    getHeight = require("metaphorjs/src/func/dom/getHeight.js"),
-    getOuterWidth = require("metaphorjs/src/func/dom/getOuterWidth.js"),
-    getOuterHeight = require("metaphorjs/src/func/dom/getOuterHeight.js"),
-    getStyle = require("metaphorjs/src/func/dom/getStyle.js"),
-    select = require("metaphorjs-select/src/func/select.js"),
-    isArray = require("metaphorjs/src/func/isArray.js"),
-    undf = require("metaphorjs/src/var/undf.js");
+module.exports = MetaphorJs.dnd.plugin.Boundary = cls({
 
-module.exports = defineClass({
-
-    $class: "draggable.plugin.Boundary",
+    $class: "MetaphorJs.dnd.plugin.Boundary",
     drg: null,
     bndEl: null,
     bnd: null,
 
     $init: function(draggable) {
-
         this.drg = draggable;
     },
 
@@ -37,8 +37,8 @@ module.exports = defineClass({
             boundary = drg.boundary;
 
         if (boundary) {
-            if (typeof boundary == "string") {
-                self.bndEl = select(boundary).shift();
+            if (typeof boundary === "string") {
+                self.bndEl = MetaphorJs.dom.select(boundary).shift();
             }
             else if (boundary.nodeType) {
                 self.bndEl = boundary;
@@ -48,7 +48,7 @@ module.exports = defineClass({
                     x:  boundary[0],
                     y:  boundary[1],
                     x1: boundary[2],
-                    x2: boundary[3]
+                    y1: boundary[3]
                 };
             }
         }
@@ -59,26 +59,26 @@ module.exports = defineClass({
             el = self.bndEl;
 
         if (el) {
-            var ofs = getOffset(el),
-                bbox = getStyle(el, "boxSizing") == "border-box";
+            var ofs = MetaphorJs.dom.getOffset(el),
+                bbox = MetaphorJs.dom.getStyle(el, "boxSizing") == "border-box";
 
             if (bbox) {
                 self.bnd = {
                     x: ofs.left,
                     y: ofs.top,
-                    x1: ofs.left + getOuterWidth(el),
-                    y1: ofs.top + getOuterHeight(el)
+                    x1: ofs.left + MetaphorJs.dom.getOuterWidth(el),
+                    y1: ofs.top + MetaphorJs.dom.getOuterHeight(el)
                 };
             }
             else {
-                var bt = parseInt(getStyle(el, "borderTop"), 10) ,
-                    bl = parseInt(getStyle(el, "borderLeft"), 10);
+                var bt = parseInt(MetaphorJs.dom.getStyle(el, "borderTop"), 10) ,
+                    bl = parseInt(MetaphorJs.dom.getStyle(el, "borderLeft"), 10);
 
                 self.bnd = {
                     x: ofs.left + bl,
                     y: ofs.top + bt,
-                    x1: ofs.left + bl + getWidth(el),
-                    y1: ofs.top + bt + getHeight(el)
+                    x1: ofs.left + bl + MetaphorJs.dom.getWidth(el),
+                    y1: ofs.top + bt + MetaphorJs.dom.getHeight(el)
                 };
             }
         }
