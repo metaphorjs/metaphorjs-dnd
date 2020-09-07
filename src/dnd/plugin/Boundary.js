@@ -7,9 +7,8 @@ require("metaphorjs/src/func/dom/getOuterHeight.js");
 require("metaphorjs/src/func/dom/getStyle.js");
 require("metaphorjs/src/func/dom/select.js");
 
-var cls = require("metaphorjs-class/src/cls.js"),
+const cls = require("metaphorjs-class/src/cls.js"),
     isArray = require("metaphorjs-shared/src/func/isArray.js"),
-    undf = require("metaphorjs-shared/src/var/undf.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
 module.exports = MetaphorJs.dnd.plugin.Boundary = cls({
@@ -103,17 +102,17 @@ module.exports = MetaphorJs.dnd.plugin.Boundary = cls({
             return;
         }
 
-        if (bnd.x != undf && (diff = bnd.x - pos.x) > 0) {
+        if (bnd.x != undefined && (diff = bnd.x - pos.x) > 0) {
             xdiff = diff;
         }
-        if (bnd.x1 != undf && (diff = bnd.x1 - (pos.x + state.w)) < 0) {
+        if (bnd.x1 != undefined && (diff = bnd.x1 - (pos.x + state.w)) < 0) {
             xdiff = diff;
         }
 
-        if (bnd.y != undf && (diff = bnd.y - pos.y) > 0) {
+        if (bnd.y != undefined && (diff = bnd.y - pos.y) > 0) {
             ydiff = diff;
         }
-        if (bnd.y1 != undf && (diff = bnd.y1 - (pos.y + state.h)) < 0) {
+        if (bnd.y1 != undefined && (diff = bnd.y1 - (pos.y + state.h)) < 0) {
             ydiff = diff;
         }
 

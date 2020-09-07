@@ -8,7 +8,7 @@ require("metaphorjs/src/func/dom/getOuterWidth.js");
 require("metaphorjs/src/func/dom/getOuterHeight.js");
 require("metaphorjs-observable/src/mixin/Observable.js");
 
-var cls = require("metaphorjs-class/src/cls.js"),
+const cls = require("metaphorjs-class/src/cls.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),
     extend = require("metaphorjs-shared/src/func/extend.js"),
     isFunction = require("metaphorjs-shared/src/func/isFunction.js");

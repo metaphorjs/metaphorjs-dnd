@@ -22,7 +22,7 @@ require("./plugin/Drop.js");
 require("./plugin/Helper.js");
 require("./plugin/Placeholder.js");
 
-var extend = require("metaphorjs-shared/src/func/extend.js"),
+const extend = require("metaphorjs-shared/src/func/extend.js"),
     bind = require("metaphorjs-shared/src/func/bind.js"),
     cls = require("metaphorjs-class/src/cls.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),

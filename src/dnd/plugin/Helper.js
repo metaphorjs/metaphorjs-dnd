@@ -2,7 +2,7 @@ require("../../__init.js");
 require("metaphorjs/src/func/dom/toFragment.js");
 require("metaphorjs-animate/src/animate/animate.js");
 
-var cls = require("metaphorjs-class/src/cls.js"),
+const cls = require("metaphorjs-class/src/cls.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
 module.exports = MetaphorJs.dnd.plugin.Helper = cls({

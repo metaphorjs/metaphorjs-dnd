@@ -2,7 +2,7 @@ require("../../__init.js");
 require("metaphorjs/src/func/dom/removeStyle.js");
 require("metaphorjs/src/func/dom/toFragment.js");
 
-var cls = require("metaphorjs-class/src/cls.js"),
+const cls = require("metaphorjs-class/src/cls.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
 
